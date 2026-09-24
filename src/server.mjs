@@ -24,7 +24,12 @@ const server = http.createServer(async (req, res) => {
       const idea = payload.idea || 'AI waiting-area multiplayer entertainment system';
       const product = await runProductLab({ idea, decisionPlane, council, brain });
       const development = await runDevLoop({ spec: `Build MVP for: ${idea}`, workforce, workers });
-      const blocked = gateway.check({ role:'ENGINEER', agent:'coder-1', capability:'deploy.production', unattended:true, approved:false });
+      const blocked = gateway.check({
+        identity:{ role:'ENGINEER', actor:'demo-user', agent:'coder-1' },
+        capability:'deploy.production',
+        resource:'production',
+        unattended:true
+      });
       return send(res, 200, { product, development, blocked, audit: gateway.audit.slice(-5) });
     }
     return send(res, 404, { error: 'not found' });
