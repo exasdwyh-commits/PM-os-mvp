@@ -38,7 +38,6 @@ export function createRepositories(storage) {
     },
     transaction(fn) {
       return storage.transaction(tx => fn(createRepositories(tx)));
-    },
-    raw: storage
+    }
   };
 }
