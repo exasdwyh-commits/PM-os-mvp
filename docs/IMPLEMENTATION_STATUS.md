@@ -114,29 +114,30 @@ The old V1 Product Council implementation and the fake evidence Product Lab work
 
 The following are **not** complete yet:
 
-1. Independent Evidence Verifier.
-2. Real primary/official source acquisition and trust hierarchy enforcement.
-3. Live validation against a real approved external provider.
-4. Knowledge Debt deduplication/merge service.
-5. Knowledge Steward promotion/versioning workflow.
-6. Executable Golden Eval runner + stored baselines/release gate.
-7. Laya / fast-reflex integration.
-8. Evolution Engine runtime.
-9. Proactive Engine A1 shadow.
-10. Digital Employee runtime beyond pure/mock software workers.
-11. Full durable queue / cancellation / resumable checkpoint executor.
-12. Credential vault/broker.
+1. Semantic Evidence Verifier beyond the current conservative rules-only verifier.
+2. Full primary/official source support validation (the current Source Fetcher verifies provenance/fetchability, not whether the page semantically proves the claim).
+3. Live validation against a real approved external research provider.
+4. Knowledge Steward promotion/versioning workflow.
+5. Laya / fast-reflex integration and outcome-based router evaluation.
+6. Evolution Engine runtime.
+7. Proactive Engine A1 shadow.
+8. Digital Employee runtime beyond pure/mock software workers.
+9. Full durable queue / cancellation / resumable checkpoint executor.
+10. ApprovalService with signed issuance/integrity policy.
+11. Credential vault/broker.
+12. Per-entity SQLite tables where query pressure justifies migration from the typed-repository-backed generic store.
 13. Browser/computer runtime.
 14. Client/voice/discussion-room UI.
 
 ## Immediate next work
 
-1. Build Independent Evidence Verifier.
-2. Add source-trust policy and primary-source fetch adapters.
-3. Build executable Golden Eval runner.
-4. Add Knowledge Debt deduplication.
-5. Validate Product/R&D against one real approved provider.
-6. Only after those are stable, implement Knowledge Steward and A1 proactive shadow.
+1. Validate Product/R&D against one real approved provider.
+2. Upgrade verifier from provenance rules to semantic claim↔source support checks.
+3. Add ApprovalService integrity/signing instead of direct grant persistence APIs.
+4. Expand executable Golden Eval from the initial 8 gated cases toward the highest-value remaining cases.
+5. Add Knowledge Steward promotion/versioning on top of the now-deduplicated Knowledge Debt service.
+6. Add Laya/router shadow outcome analysis before enabling active routing.
+7. Only after these are stable, implement A1 proactive shadow.
 
 ## Acceptance status
 
@@ -150,5 +151,35 @@ The following are **not** complete yet:
 - stale-task recovery: PASS
 - request idempotency: PASS
 - CI: PASS
-- independent factual verification: NOT IMPLEMENTED
+- rules-only independent provenance verifier: PASS
+- independently fetched source provenance + injection scan: PASS
+- model-only claim remains UNKNOWN: PASS
+- official/primary source promotion capped below VERIFIED: PASS
+- Knowledge Debt normalized-key deduplication: PASS
+- typed repository boundary over current storage: PASS
+- executable 8-case Golden Eval CI gate: PASS
+- semantic claim↔source factual verification: PARTIAL / NOT YET SUFFICIENT
 - live external provider verification: NOT YET VERIFIED
+
+
+## Latest review-driven hardening
+
+The latest independent review identified several remaining issues that were still valid after the earlier security pass. The following have now been implemented:
+
+- a typed repository boundary now sits between workflows and the generic storage adapter;
+- KnowledgeDebt creation uses a merge service with normalized keys, occurrence counts and task linkage;
+- a read-only VERIFIER identity can fetch source URLs only through ToolBroker;
+- fetched source content is bounded, hashed and injection-scanned;
+- source provenance is classified separately from model output;
+- Evidence Verifier v0.1 is independent from the research executor;
+- model-only claims remain UNKNOWN;
+- one clean official/primary fetched source can reach SUPPORTED;
+- two independent clean official/primary source hosts can reach STRONG;
+- rules-only verification never emits VERIFIED;
+- Report conclusions preserve verifier notes and the Report records verifier identity/run metadata;
+- router recommendation vs actual executor outcome is now recorded for future Laya evaluation;
+- ToolBroker internals use private fields so workers cannot reach its storage handle;
+- SYSTEM role no longer has task.delegate;
+- Golden Eval is executable in CI with an initial 8-case baseline.
+
+Important limitation: the current verifier proves **provenance/fetchability/trust-tier conditions**, not full semantic entailment between a claim and source text. VERIFIED remains intentionally unreachable in this v0.1 implementation.
