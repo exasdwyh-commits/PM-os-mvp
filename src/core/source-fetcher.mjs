@@ -158,6 +158,11 @@ export async function fetchSource({
       maxBytes
     });
 
+    const remote=normalizedIp(response.remoteAddress ?? '');
+    if(!isPublicAddress(remote) || !pinned.some(x=>x.address===remote)){
+      throw new Error('source-remote-address-mismatch');
+    }
+
     if(response.status>=300 && response.status<400){
       const location=headerValue(response.headers,'location');
       if(!location) throw new Error('redirect-without-location');
@@ -169,7 +174,18 @@ export async function fetchSource({
     }
 
     if(!(response.status>=200 && response.status<300)) throw new Error('source-http-status-not-success');
+
+    const encoding=String(headerValue(response.headers,'content-encoding') ?? 'identity').toLowerCase();
+    if(encoding && encoding !== 'identity') throw new Error('source-compressed-content-rejected');
+
+    const contentType=String(headerValue(response.headers,'content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if(!ACCEPTED_MIME.has(contentType)) throw new Error('source-content-type-not-allowed');
+
+    const declared=Number(headerValue(response.headers,'content-length') ?? 0);
+    if(declared && declared > maxBytes) throw new Error('source-too-large');
+
     const raw=String(response.body ?? '');
+    if(Buffer.byteLength(raw,'utf8') > maxBytes) throw new Error('source-too-large');
     if(!raw.trim()) throw new Error('source-empty-content');
 
     const scan=scanExternalText(raw);
@@ -188,8 +204,8 @@ export async function fetchSource({
       trustTier:scan.quarantined ? 'QUARANTINED' : finalClass.trustTier,
       organizationId:finalClass.organizationId,
       host:finalClass.host,
-      remoteAddress:response.remoteAddress ?? pinned[0]?.address ?? null,
-      contentType:String(headerValue(response.headers,'content-type') ?? '').split(';')[0].trim().toLowerCase()
+      remoteAddress:remote,
+      contentType
     };
   }
 }
