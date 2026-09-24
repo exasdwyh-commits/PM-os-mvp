@@ -1,21 +1,47 @@
-const OFFICIAL_SUFFIXES=[
-  'gov.cn','nhc.gov.cn','samr.gov.cn','nmpa.gov.cn',
-  'fda.gov','nih.gov','clinicaltrials.gov','who.int'
-];
-const PRIMARY_SUFFIXES=['ncbi.nlm.nih.gov','pubmed.ncbi.nlm.nih.gov'];
-const REPUTABLE_SUFFIXES=['reuters.com','apnews.com','nature.com','science.org'];
-
-function hostMatches(host,suffix){
-  return host === suffix || host.endsWith(`.${suffix}`);
-}
+const SOURCES=Object.freeze({
+  'fda.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'FDA'},
+  'www.fda.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'FDA'},
+  'nih.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NIH'},
+  'www.nih.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NIH'},
+  'clinicaltrials.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NIH'},
+  'www.clinicaltrials.gov': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NIH'},
+  'ncbi.nlm.nih.gov': {sourceType:'PRIMARY',trustTier:'PRIMARY',organizationId:'NIH'},
+  'pubmed.ncbi.nlm.nih.gov': {sourceType:'PRIMARY',trustTier:'PRIMARY',organizationId:'NIH'},
+  'who.int': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'WHO'},
+  'www.who.int': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'WHO'},
+  'nhc.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NHC-CN'},
+  'www.nhc.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NHC-CN'},
+  'samr.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'SAMR-CN'},
+  'www.samr.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'SAMR-CN'},
+  'nmpa.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NMPA-CN'},
+  'www.nmpa.gov.cn': {sourceType:'OFFICIAL',trustTier:'OFFICIAL',organizationId:'NMPA-CN'},
+  'reuters.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'REUTERS'},
+  'www.reuters.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'REUTERS'},
+  'apnews.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'AP'},
+  'www.apnews.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'AP'},
+  'nature.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'NATURE'},
+  'www.nature.com': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'NATURE'},
+  'science.org': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'SCIENCE'},
+  'www.science.org': {sourceType:'REPUTABLE',trustTier:'REPUTABLE',organizationId:'SCIENCE'}
+});
 
 export function classifySourceUrl(value){
   let url;
-  try { url=new URL(String(value)); } catch { return {sourceType:'EXTERNAL',trustTier:'UNRATED',host:null}; }
-  if (!['http:','https:'].includes(url.protocol)) return {sourceType:'EXTERNAL',trustTier:'UNRATED',host:url.hostname};
+  try { url=new URL(String(value)); }
+  catch { return {sourceType:'EXTERNAL',trustTier:'UNRATED',organizationId:null,host:null}; }
   const host=url.hostname.toLowerCase();
-  if (OFFICIAL_SUFFIXES.some(x=>hostMatches(host,x))) return {sourceType:'OFFICIAL',trustTier:'OFFICIAL',host};
-  if (PRIMARY_SUFFIXES.some(x=>hostMatches(host,x))) return {sourceType:'PRIMARY',trustTier:'PRIMARY',host};
-  if (REPUTABLE_SUFFIXES.some(x=>hostMatches(host,x))) return {sourceType:'REPUTABLE',trustTier:'REPUTABLE',host};
-  return {sourceType:'EXTERNAL',trustTier:'UNRATED',host};
+  if (url.protocol !== 'https:') {
+    return {sourceType:'EXTERNAL',trustTier:'UNRATED',organizationId:null,host};
+  }
+  const source=SOURCES[host];
+  if(!source) return {sourceType:'EXTERNAL',trustTier:'UNRATED',organizationId:null,host};
+  return {...source,host};
+}
+
+export function sourceOrganizationId(value){
+  return classifySourceUrl(value).organizationId;
+}
+
+export function allowedSourceHosts(){
+  return Object.keys(SOURCES);
 }
