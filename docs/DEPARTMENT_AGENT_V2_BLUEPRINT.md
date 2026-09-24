@@ -986,3 +986,138 @@ Most intermediate steps should be performed automatically by digital employees.
 The user consumes the **product report and decision points**, not the raw process.
 
 This is the target operating model for PM OS.
+
+
+---
+
+## 27. Proactive Work Engine — the assistant should find useful work
+
+The Department Assistant is not a request/response bot.
+
+It is a persistent operator that continuously asks:
+
+> “Given current goals, projects, commitments, knowledge gaps and recent outcomes, what useful work should be done next?”
+
+### 27.1 Work sources
+
+The Proactive Work Engine may create candidate work from:
+
+- open project goals;
+- overdue or blocked tasks;
+- unresolved questions;
+- upcoming deadlines and meetings;
+- Knowledge Debt;
+- Improvement Backlog;
+- stale evidence;
+- failed or low-quality past tasks;
+- missing follow-ups;
+- supplier / market / research changes;
+- scheduled recurring responsibilities;
+- unreviewed reports;
+- outcome checks for previous decisions.
+
+### 27.2 Candidate-work loop
+
+```text
+Observe state
+↓
+Generate candidate work
+↓
+Laya / fast reflex ranks urgency + relevance + cost + risk
+↓
+Policy filter
+↓
+┌───────────────┬──────────────────┬────────────────┐
+│ Safe & useful │ Needs approval   │ Not worth doing │
+↓               ↓                  ↓
+Auto execute    Ask human          Drop / defer
+↓
+Delegate to digital employees
+↓
+Supervise
+↓
+Verify
+↓
+Update project / knowledge / evolution logs
+↓
+Daily or event-based summary
+```
+
+### 27.3 Autonomy levels
+
+Use explicit autonomy levels.
+
+#### A0 — reactive only
+Only respond to direct requests.
+
+#### A1 — proactive suggestions
+May identify useful next work but cannot start it.
+
+#### A2 — safe proactive execution
+May autonomously execute low-risk internal work such as:
+- organize knowledge;
+- refresh stale research;
+- reconcile project notes;
+- draft reports;
+- run tests;
+- prepare meeting briefs;
+- check open tasks;
+- create internal analysis.
+
+#### A3 — supervised operational execution
+May run broader workflows and digital employees, but protected external actions pause for approval.
+
+#### A4 — high-autonomy department
+Future mode only after extensive evaluation. Governance boundaries still cannot be bypassed.
+
+Initial V2 target: **A2**.
+
+### 27.4 “Find work” is goal-constrained
+
+The assistant must not invent arbitrary busywork.
+
+Every proactive task needs at least one explicit reason:
+
+```text
+linked_goal
+linked_project
+linked_deadline
+linked_knowledge_debt
+linked_improvement
+linked_outcome_check
+linked_recurring_responsibility
+```
+
+If no link exists, the task should not be started automatically.
+
+### 27.5 Resource awareness
+
+Proactive work should consider:
+- machine load;
+- model/API budget;
+- privacy class;
+- current user activity;
+- task priority;
+- expected value;
+- deadline;
+- whether fresh information is actually needed.
+
+Idle capacity can be used for useful internal work, not uncontrolled exploration.
+
+### 27.6 Daily initiative summary
+
+The assistant should be able to report:
+
+```text
+Today I completed proactively:
+- refreshed 2 stale market reports;
+- resolved 1 knowledge debt;
+- re-ran QA on the product-cost workflow;
+- prepared tomorrow's product meeting brief.
+
+I found 2 items that need you:
+- approve supplier outreach;
+- choose between two product-positioning directions.
+```
+
+This is the target behavior of a digital chief of staff: not waiting for work, but continuously moving goals forward within controlled boundaries.
