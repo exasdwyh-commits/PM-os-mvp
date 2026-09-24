@@ -86,6 +86,9 @@ export function createApprovalGrant(input = {}, now) {
     singleUse: input.singleUse ?? true,
     issuedAt: input.issuedAt ?? nowIso(now),
     validUntil: input.validUntil ?? null,
+    issuer: input.issuer ?? null,
+    channel: input.channel ?? null,
+    signature: input.signature ?? null,
     usedAt: input.usedAt ?? null,
     usedByRunId: input.usedByRunId ?? null
   };
