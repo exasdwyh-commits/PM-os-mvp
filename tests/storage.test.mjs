@@ -5,8 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { SqliteStorage } from '../src/storage/sqlite-storage.mjs';
 import { createProject, createTask } from '../src/contracts/domain.mjs';
-import { createEvidence, createReport } from '../src/contracts/artifacts.mjs';
+import { createEvidence, createReport, createApprovalGrant } from '../src/contracts/artifacts.mjs';
 import { createEvent } from '../src/contracts/events.mjs';
+import { recoverStaleTasks } from '../src/core/recovery.mjs';
 
 test('sqlite storage persists projects tasks evidence reports and events across restart', () => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pm-os-'));
@@ -15,8 +16,8 @@ test('sqlite storage persists projects tasks evidence reports and events across 
 
   let s=new SqliteStorage(file);
   const project=createProject({id:'PRJ-1',title:'Product R&D'},now);
-  const task=createTask({id:'TSK-1',projectId:project.id,title:'Research',status:'RUNNING'},now);
-  const evidence=createEvidence({id:'EVD-1',title:'Official source',sourceType:'OFFICIAL',projectId:project.id,taskId:task.id},now);
+  const task=createTask({id:'TSK-1',projectId:project.id,title:'Research',status:'RUNNING',stage:'EXECUTE',leaseUntil:'2026-09-24T01:00:00.000Z'},now);
+  const evidence=createEvidence({id:'EVD-1',title:'Official source',sourceType:'OFFICIAL',trustTier:'OFFICIAL',projectId:project.id,taskId:task.id},now);
   const report=createReport({id:'RPT-1',title:'Research report',projectId:project.id,taskId:task.id},now);
   const event=createEvent({id:'EVT-1',type:'TASK_CREATED',projectId:project.id,taskId:task.id},now);
 
@@ -42,5 +43,45 @@ test('sqlite storage upserts records without duplicating identity', () => {
   s.put('task',{id:'TSK-1',status:'COMPLETED',updatedAt:'2026-09-24T01:00:00.000Z'});
   assert.equal(s.list('task').length,1);
   assert.equal(s.get('task','TSK-1').status,'COMPLETED');
+  s.close();
+});
+
+test('sqlite approval consumption survives restart and prevents replay',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pm-os-apr-'));
+  const file=path.join(dir,'pm-os.db');
+  let s=new SqliteStorage(file);
+  s.putApproval(createApprovalGrant({
+    id:'APR-1',approvedBy:'leader',taskId:'TSK-1',
+    capability:'git.merge',resource:'refs/heads/feature/demo'
+  }));
+  assert.ok(s.consumeApproval('APR-1','RUN-1'));
+  s.close();
+
+  s=new SqliteStorage(file);
+  assert.equal(s.consumeApproval('APR-1','RUN-2'),null);
+  assert.equal(s.getApproval('APR-1').usedByRunId,'RUN-1');
+  s.close();
+});
+
+test('event idempotency returns prior event rather than duplicating',()=>{
+  const s=new SqliteStorage(':memory:');
+  const event=createEvent({id:'EVT-IDEM',type:'TASK_CREATED',taskId:'TSK-1'});
+  s.appendEvent(event,{idempotencyKey:'task-created:TSK-1'});
+  const second=s.appendEvent({...event,id:'EVT-OTHER'},{idempotencyKey:'task-created:TSK-1'});
+  assert.equal(second.id,'EVT-IDEM');
+  assert.equal(s.listEvents({taskId:'TSK-1'}).length,1);
+  s.close();
+});
+
+test('stale active tasks are recovered to PAUSED instead of remaining ghost RUNNING',()=>{
+  const s=new SqliteStorage(':memory:');
+  s.put('task',{
+    id:'TSK-STALE',projectId:'PRJ-1',title:'stale',status:'RUNNING',stage:'EXECUTE',
+    leaseUntil:'2026-09-23T00:00:00.000Z',updatedAt:'2026-09-23T00:00:00.000Z'
+  });
+  const recovered=recoverStaleTasks(s,new Date('2026-09-24T00:00:00.000Z'));
+  assert.equal(recovered.length,1);
+  assert.equal(s.get('task','TSK-STALE').status,'PAUSED');
+  assert.equal(s.listEvents({taskId:'TSK-STALE'}).some(e=>e.type==='TASK_PAUSED'),true);
   s.close();
 });
