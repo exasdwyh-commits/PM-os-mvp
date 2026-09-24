@@ -32,6 +32,7 @@ export class SqliteStorage {
       CREATE INDEX IF NOT EXISTS idx_records_project ON records(project_id);
       CREATE INDEX IF NOT EXISTS idx_records_task ON records(task_id);
       CREATE INDEX IF NOT EXISTS idx_records_kind_status ON records(kind, status);
+      CREATE INDEX IF NOT EXISTS idx_records_kind_updated ON records(kind, updated_at);
 
       CREATE TABLE IF NOT EXISTS events (
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,11 +62,42 @@ export class SqliteStorage {
         payload TEXT NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS approvals (
+        id TEXT PRIMARY KEY,
+        task_id TEXT,
+        capability TEXT NOT NULL,
+        resource TEXT NOT NULL,
+        single_use INTEGER NOT NULL,
+        valid_until TEXT,
+        used_at TEXT,
+        used_by_run_id TEXT,
+        payload TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL,
+        result_json TEXT,
+        created_at TEXT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS metadata (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
       );
     `);
+  }
+
+  transaction(fn) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = fn(this);
+      this.db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
   }
 
   put(kind, record) {
@@ -74,7 +106,7 @@ export class SqliteStorage {
     const now = new Date().toISOString();
     const createdAt = record.createdAt ?? now;
     const updatedAt = record.updatedAt ?? now;
-    const stmt = this.db.prepare(`
+    this.db.prepare(`
       INSERT INTO records(kind,id,project_id,task_id,data_class,status,created_at,updated_at,payload)
       VALUES(?,?,?,?,?,?,?,?,?)
       ON CONFLICT(kind,id) DO UPDATE SET
@@ -84,8 +116,7 @@ export class SqliteStorage {
         status=excluded.status,
         updated_at=excluded.updated_at,
         payload=excluded.payload
-    `);
-    stmt.run(
+    `).run(
       kind, record.id, record.projectId ?? null, record.taskId ?? null,
       record.dataClass ?? null, record.status ?? null, createdAt, updatedAt, json(record)
     );
@@ -109,8 +140,12 @@ export class SqliteStorage {
     ).all(...args).map(row => parse(row.payload));
   }
 
-  appendEvent(event) {
+  appendEvent(event, { idempotencyKey = null } = {}) {
     if (!event?.id || !event?.type) throw new TypeError('event id/type required');
+    if (idempotencyKey) {
+      const existing = this.getIdempotent('event', idempotencyKey);
+      if (existing) return existing;
+    }
     this.db.prepare(`
       INSERT INTO events(id,type,at,actor,project_id,task_id,correlation_id,causation_id,payload)
       VALUES(?,?,?,?,?,?,?,?,?)
@@ -119,6 +154,7 @@ export class SqliteStorage {
       event.projectId ?? null, event.taskId ?? null,
       event.correlationId ?? null, event.causationId ?? null, json(event.payload ?? {})
     );
+    if (idempotencyKey) this.setIdempotent('event', idempotencyKey, event);
     return event;
   }
 
@@ -154,6 +190,59 @@ export class SqliteStorage {
   listAudit(limit = 200) {
     return this.db.prepare('SELECT payload FROM audit ORDER BY seq DESC LIMIT ?')
       .all(limit).map(row => parse(row.payload));
+  }
+
+  putApproval(grant) {
+    if (!grant?.id) throw new TypeError('approval grant.id is required');
+    this.db.prepare(`
+      INSERT INTO approvals(id,task_id,capability,resource,single_use,valid_until,used_at,used_by_run_id,payload)
+      VALUES(?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET
+        task_id=excluded.task_id,
+        capability=excluded.capability,
+        resource=excluded.resource,
+        single_use=excluded.single_use,
+        valid_until=excluded.valid_until,
+        used_at=excluded.used_at,
+        used_by_run_id=excluded.used_by_run_id,
+        payload=excluded.payload
+    `).run(
+      grant.id, grant.taskId ?? null, grant.capability, grant.resource,
+      grant.singleUse ? 1 : 0, grant.validUntil ?? null, grant.usedAt ?? null,
+      grant.usedByRunId ?? null, json(grant)
+    );
+    return grant;
+  }
+
+  getApproval(id) {
+    const row = this.db.prepare('SELECT payload,used_at,used_by_run_id FROM approvals WHERE id=?').get(id);
+    if (!row) return null;
+    return { ...parse(row.payload), usedAt: row.used_at, usedByRunId: row.used_by_run_id };
+  }
+
+  consumeApproval(id, runId, usedAt = new Date().toISOString()) {
+    const grant = this.getApproval(id);
+    if (!grant) return null;
+    if (!grant.singleUse) return grant;
+    const result = this.db.prepare(`
+      UPDATE approvals SET used_at=?, used_by_run_id=?,
+        payload=json_set(payload,'$.usedAt',?,'$.usedByRunId',?)
+      WHERE id=? AND used_at IS NULL
+    `).run(usedAt, runId ?? null, usedAt, runId ?? null, id);
+    return result.changes === 1 ? this.getApproval(id) : null;
+  }
+
+  setIdempotent(namespace, key, result) {
+    this.db.prepare(`
+      INSERT OR IGNORE INTO idempotency_keys(key,namespace,result_json,created_at)
+      VALUES(?,?,?,?)
+    `).run(key, namespace, json(result), new Date().toISOString());
+    return this.getIdempotent(namespace, key);
+  }
+
+  getIdempotent(namespace, key) {
+    const row = this.db.prepare('SELECT result_json FROM idempotency_keys WHERE key=? AND namespace=?').get(key, namespace);
+    return row ? parse(row.result_json) : null;
   }
 
   setMeta(key, value) {
