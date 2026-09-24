@@ -75,10 +75,11 @@ export class SqliteStorage {
       );
 
       CREATE TABLE IF NOT EXISTS idempotency_keys (
-        key TEXT PRIMARY KEY,
         namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
         result_json TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (namespace, key)
       );
 
       CREATE TABLE IF NOT EXISTS metadata (
@@ -86,6 +87,35 @@ export class SqliteStorage {
         value TEXT NOT NULL
       );
     `);
+    this.migrateIdempotencyKeys();
+  }
+
+  migrateIdempotencyKeys() {
+    const columns=this.db.prepare('PRAGMA table_info(idempotency_keys)').all();
+    const namespacePk=columns.find(c=>c.name==='namespace')?.pk ?? 0;
+    const keyPk=columns.find(c=>c.name==='key')?.pk ?? 0;
+    if(namespacePk===1 && keyPk===2) return;
+
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.exec(`
+        ALTER TABLE idempotency_keys RENAME TO idempotency_keys_legacy;
+        CREATE TABLE idempotency_keys (
+          namespace TEXT NOT NULL,
+          key TEXT NOT NULL,
+          result_json TEXT,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (namespace, key)
+        );
+        INSERT OR IGNORE INTO idempotency_keys(namespace,key,result_json,created_at)
+        SELECT namespace,key,result_json,created_at FROM idempotency_keys_legacy;
+        DROP TABLE idempotency_keys_legacy;
+      `);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
   }
 
   transaction(fn) {
@@ -234,9 +264,9 @@ export class SqliteStorage {
 
   setIdempotent(namespace, key, result) {
     this.db.prepare(`
-      INSERT OR IGNORE INTO idempotency_keys(key,namespace,result_json,created_at)
+      INSERT OR IGNORE INTO idempotency_keys(namespace,key,result_json,created_at)
       VALUES(?,?,?,?)
-    `).run(key, namespace, json(result), new Date().toISOString());
+    `).run(namespace, key, json(result), new Date().toISOString());
     return this.getIdempotent(namespace, key);
   }
 
