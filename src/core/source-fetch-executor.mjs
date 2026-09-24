@@ -5,12 +5,12 @@ import { classifySourceUrl } from './source-trust.mjs';
 export class SourceFetchExecutor {
   #broker;
 
-  constructor({gateway,storage,actor='principal',fetchImpl=globalThis.fetch}) {
+  constructor({gateway,storage,actor='principal',resolver,requestImpl}) {
     this.#broker=new ToolBroker({
       gateway,
       storage,
       identity:{role:'VERIFIER',actor,agent:'source-fetcher'},
-      tools:{fetchSource:input=>fetchSource({...input,fetchImpl})}
+      tools:{fetchSource:input=>fetchSource({...input,resolver,requestImpl})}
     });
   }
 
