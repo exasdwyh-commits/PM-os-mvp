@@ -34,7 +34,6 @@
     "SYSTEM": [
       "memory.read",
       "decision.route",
-      "task.delegate",
       "artifact.read",
       "report.write"
     ],
