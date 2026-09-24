@@ -16,7 +16,7 @@ function normalizePayload(payload) {
 }
 
 export class MockResearchProvider {
-  constructor() { this.id = 'mock-research'; this.external = false; }
+  constructor() { this.id = 'mock-research'; this.external = false; this.allowedDataClasses = ['PUBLIC','INTERNAL','CONFIDENTIAL','RESTRICTED']; }
   async research({ idea }) {
     return normalizePayload({
       summary: `Initial structured analysis for: ${idea}`,
@@ -47,6 +47,7 @@ export class OpenAICompatibleResearchProvider {
     if (!baseUrl || !apiKey || !model) throw new TypeError('OpenAI-compatible provider requires baseUrl, apiKey and model');
     this.id = `openai-compatible:${model}`;
     this.external = true;
+    this.allowedDataClasses = ['PUBLIC','INTERNAL'];
     this.baseUrl = baseUrl.replace(/\/$/,'');
     this.apiKey = apiKey;
     this.model = model;
