@@ -39,3 +39,28 @@ A cheap decision model may choose from options that the system has already decla
 4. `src/core/workforce.mjs`
 5. `src/core/decision-council.mjs`
 6. `docs/MIGRATION_TO_PM_NEXT.md`
+
+
+## V2 direction: Department AI Assistant
+
+The repository is now moving from a routing/governance demo toward a department-level AI chief-of-staff.
+
+Core design and implementation order:
+
+1. [Department Agent V2 Blueprint](docs/DEPARTMENT_AGENT_V2_BLUEPRINT.md)
+2. [V2 Implementation Roadmap](docs/V2_IMPLEMENTATION_ROADMAP.md)
+3. [Local Agent Handoff](docs/LOCAL_AGENT_HANDOFF.md)
+
+V2 adds:
+- one conversational entry point for managers;
+- durable Project / Task state;
+- direct vs delegated vs executive collaboration modes;
+- fast System-1 routing with safe fallbacks;
+- expert/model registry;
+- explicit VERIFIED / INFERRED / UNCERTAIN / UNKNOWN knowledge states;
+- Knowledge Steward + Knowledge Debt;
+- controlled self-evolution and improvement requirements;
+- user-correction learning and regression cases;
+- outcome-linked organizational memory.
+
+Current Phase 0 contracts live under `src/contracts/`.
