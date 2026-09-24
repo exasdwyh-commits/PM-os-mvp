@@ -1,42 +1,77 @@
-# Handoff prompt for a local coding agent
+# V2 handoff for a local coding agent
 
-Use this repository as a **reference architecture**, not as a replacement application.
+Treat these files as the authoritative planning order:
 
-## Mission
-Study this MVP, then compare it with the local PM-next codebase and produce a migration plan plus the smallest safe implementation that introduces the same architectural seams without breaking existing behavior.
+1. `docs/DEPARTMENT_AGENT_V2_BLUEPRINT.md`
+2. `docs/V2_IMPLEMENTATION_ROADMAP.md`
+3. `docs/ARCHITECTURE.md`
+4. `src/contracts/`
+5. `src/core/`
+6. `config/`
 
-## Read first
-1. `README.md`
-2. `docs/ARCHITECTURE.md`
-3. `docs/MIGRATION_TO_PM_NEXT.md`
-4. all files under `src/core/`
-5. `config/models.json` and `config/policies.json`
+## Current product definition
 
-## Rules
-- Preserve existing PM-next features and data models unless a migration is explicitly justified.
-- Do not import this demo wholesale.
-- Introduce interfaces/adapters first; switch existing code behind them incrementally.
-- Model routing must begin in **shadow mode**. Log recommendations before allowing automatic switching.
-- High-impact capabilities must pass through a centralized server-side capability gateway.
-- Never let an agent invent its own permissions or model IDs.
-- Keep Coder, QA and Reviewer logically separate even if they initially execute in the same process.
-- Product decisions must distinguish external evidence from internal agent opinions.
-- Keep original decision records immutable; add outcomes/reflections as linked records or append-only updates.
-- Add tests for every new policy/routing/workflow behavior before enabling it.
+PM OS V2 is a department-level AI chief of staff. It is the user's single conversational entry point and coordinates specialist agents/digital employees, knowledge, projects, verification, reporting, proactive work and controlled self-improvement.
 
-## First deliverables
-1. `docs/AGENT_OS_GAP_ANALYSIS.md` — current PM-next vs this reference architecture.
-2. `docs/AGENT_OS_MIGRATION_PLAN.md` — staged migration with rollback points.
-3. A small PR/branch implementing only:
-   - Model Registry interface,
-   - Decision Plane in shadow mode,
-   - Capability Gateway with audit records.
-4. Tests proving no existing model selection or protected actions regress.
+## Architecture rules
 
-## Acceptance criteria
-- Existing PM-next tests remain green.
-- Router failure does not block normal work.
-- Shadow routing never changes the actual model.
-- A protected action is denied without the required grant/approval.
-- Every policy decision is auditable.
-- No secrets are written into decision logs.
+- V2 currently assumes one principal / one department instance.
+- Department Assistant orchestrates; it is not the final factual or security authority.
+- Authority order: Human → Sentinel/ToolBroker → Evidence/Verifier → Department Assistant → Reflex/Experts/Employees.
+- Laya/System-1 is advisory routing/reflex only.
+- Routing may fail open; safety/privacy/protected action checks fail closed.
+- Every real tool call must pass through ToolBroker.
+- Approval is a scoped ApprovalGrant, never a boolean.
+- Private data routing is constrained by `dataClass`.
+- External content is untrusted input.
+- Model/agent agreement is not evidence.
+- Use `claimKind` and `evidenceLevel` separately.
+- Freshness is separate from historical truth.
+- Company Knowledge promotion is stricter than Project Memory.
+- Evolution proposes changes; it does not self-deploy them.
+- Prompt/skill changes that alter behavior require eval/shadow gates.
+- Proactive execution begins in A1 shadow before A2.
+
+## Current implementation priority
+
+Work only in the order defined in `V2_IMPLEMENTATION_ROADMAP.md`.
+
+The immediate target is a thin, real Product/R&D vertical slice:
+
+```text
+Conversation
+→ durable Project/Task
+→ one real provider
+→ Evidence
+→ Verify
+→ Report
+→ Knowledge Debt
+→ persistent Audit
+```
+
+Do not expand browser/VM autonomy before this slice is measurable and governed.
+
+## Required engineering discipline
+
+- Preserve existing tests.
+- Add contract/policy tests before enabling behavior.
+- Keep provider code behind adapters.
+- Keep storage behind an adapter.
+- Use runtime-bound identities.
+- Do not let workers hold unrestricted tool handles.
+- Use idempotency keys for side effects.
+- Add correlation IDs to long-running work.
+- Keep domain templates outside generic core code.
+
+## Definition of useful progress
+
+A change is useful only if it improves one of:
+- reliability;
+- evidence quality;
+- privacy;
+- governance;
+- measurable task quality;
+- durable recovery;
+- user-facing report quality.
+
+Avoid adding more visible agent UI or configuration surfaces unless required by the client experience.
