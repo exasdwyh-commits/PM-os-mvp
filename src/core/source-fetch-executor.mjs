@@ -1,5 +1,6 @@
 import { ToolBroker } from './tool-broker.mjs';
 import { fetchSource } from './source-fetcher.mjs';
+import { classifySourceUrl } from './source-trust.mjs';
 
 export class SourceFetchExecutor {
   constructor({gateway,storage,actor='principal',fetchImpl=globalThis.fetch}) {
@@ -12,13 +13,20 @@ export class SourceFetchExecutor {
   }
 
   async fetch({taskId,runId,url}) {
-    let host;
-    try { host=new URL(url).hostname; } catch { return {status:'blocked',reason:'invalid-source-url'}; }
+    const classified=classifySourceUrl(url);
+    if(!classified.host) return {status:'blocked',reason:'invalid-source-url'};
+    if(!['OFFICIAL','PRIMARY','REPUTABLE'].includes(classified.trustTier)){
+      return {
+        status:'blocked',
+        reason:'source-domain-not-allowlisted',
+        source:{host:classified.host,trustTier:classified.trustTier}
+      };
+    }
     try {
       return await this.broker.call({
         tool:'fetchSource',
         capability:'source.fetch',
-        resource:`source:${host}`,
+        resource:`source:${classified.host}`,
         taskId,
         runId,
         input:{url}
