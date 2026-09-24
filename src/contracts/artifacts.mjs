@@ -28,7 +28,14 @@ export function createEvidence(input = {}, now) {
     untrustedInput: input.untrustedInput ?? !['OFFICIAL','INTERNAL_VERIFIED'].includes(sourceType),
     capturedAt: input.capturedAt ?? nowIso(now),
     sourceDate: input.sourceDate ?? null,
+    publicationDate: input.publicationDate ?? null,
+    fetchedAt: input.fetchedAt ?? null,
+    fetcherRunId: input.fetcherRunId ?? null,
+    httpStatus: input.httpStatus ?? null,
     contentHash: input.contentHash ?? null,
+    rawContentRef: input.rawContentRef ?? null,
+    rawContentPreview: input.rawContentPreview ?? null,
+    injectionScanResult: input.injectionScanResult ?? null,
     projectId: input.projectId ?? null,
     taskId: input.taskId ?? null,
     metadata: { ...(input.metadata ?? {}) }
@@ -56,6 +63,9 @@ export function createReport(input = {}, now) {
     knowledgeDebtIds: [...(input.knowledgeDebtIds ?? [])],
     nextActions: [...(input.nextActions ?? [])],
     costSummary: input.costSummary ?? null,
+    verifierRunId: input.verifierRunId ?? null,
+    verifierIdentity: input.verifierIdentity ?? null,
+    verifiedAt: input.verifiedAt ?? null,
     createdAt: input.createdAt ?? nowIso(now)
   };
 }
