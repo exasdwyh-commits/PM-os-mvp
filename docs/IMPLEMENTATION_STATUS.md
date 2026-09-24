@@ -4,144 +4,151 @@ Last updated: 2026-09-24
 
 ## Current milestone
 
-The repository has moved beyond architecture-only contracts and now contains the first durable Product/R&D vertical slice.
+The repository now contains a governed, durable Product/R&D vertical slice and has completed the first security-hardening pass from independent red-team review.
 
-### Implemented
+## Implemented
 
-#### V2 contracts
-- Project
-- Task
-- KnowledgeItem
-- KnowledgeDebt
-- Improvement
-- Evidence
-- Report
-- ApprovalGrant
-- Delegation
-- Goal
-- Correction
+### Contracts / epistemic model
+- Project / Task / Goal
+- Evidence / Report
+- KnowledgeItem / KnowledgeDebt
+- ApprovalGrant / Delegation / Correction / Improvement
 - correlated Event model
-
-#### Governance
-- runtime-bound identity
-- Capability Gateway
-- per-call ToolBroker
-- scoped ApprovalGrant
-- resource-level policy checks
-- dedicated EVOLUTION role
-- persisted audit sink
-
-#### Privacy / routing
-- PUBLIC / INTERNAL / CONFIDENTIAL / RESTRICTED data classes
-- provider/model allowed-data-class metadata
-- no silent external frontier fallback when policy blocks a model
-- external research disclosure events
-- external evidence marked untrusted by default
-
-#### Epistemic model
 - claimKind separated from evidenceLevel
-- freshness separated from historical verification
-- UNKNOWN is a valid result
-- router/classifier confidence is not factual confidence
+- freshness separated from truth/evidence status
+- explicit UNKNOWN behavior
+- task durable stage / attempt / runId / lease fields
 
-#### Durable storage
+### Governance
+- runtime-bound identity in ToolBroker executors
+- fail-closed Capability Gateway resource policy
+- policy startup validation for approval-required capabilities
+- V2 research execution routed through ToolBroker
+- durable scoped ApprovalGrant storage
+- atomic single-use grant consumption
+- replay prevention across restart
+- task/resource/action scope validation
+- dedicated EVOLUTION role
+- persisted capability audit
+
+### HTTP boundary
+- actor identity derived server-side
+- request dataClass cannot downgrade server/project baseline
+- optional bearer-token protection
+- localhost-only default when API token is absent
+- 1 MB request-body limit
+- generic external error responses with request IDs
+- no wildcard CORS by default
+- legacy `/api/demo` retired
+
+### Privacy / untrusted content
+- PUBLIC / INTERNAL / CONFIDENTIAL / RESTRICTED data classes
+- provider/model allowed-data-class constraints
+- no silent external frontier fallback when privacy blocks routing
+- EXTERNAL_DISCLOSURE events
+- sourceType and trustTier enums
+- external/model content untrusted by default
+- instruction-like content scanner
+- QUARANTINED evidence tier
+- quarantined content excluded from conclusions/actions
+- INJECTION_SUSPECT event
+
+### Durable storage / recovery
 - Storage Adapter boundary
-- SQLite implementation using Node built-in sqlite
+- SQLite + WAL implementation
 - MemoryStorage test adapter
-- persistent records/events/audit/metadata
-- restart persistence tests
-- idempotent record upsert
+- records / events / audit / approvals / idempotency / metadata
+- transaction primitive
+- event idempotency primitive
+- atomic workflow-start idempotency
+- repeated Idempotency-Key does not create a second Project
+- stale RUNNING/VERIFYING tasks recover to PAUSED on startup
+- approval replay prevention survives process restart
 
-#### Runtime
-- SQLite wired into the runtime
-- Company Brain moved onto Storage Adapter
-- Capability audit persisted through Storage Adapter
+### Product/R&D vertical slice
 
-#### Product/R&D vertical slice
 Endpoint:
+
 `POST /api/v2/product-rnd`
 
 Current flow:
 
 ```text
 idea
-→ create Project
-→ create durable Task
-→ route recommendation
-→ research provider
-→ Evidence records
+→ Project + Task
+→ Router recommendation
+→ ResearchExecutor
+→ ToolBroker
+→ approved provider
+→ sanitize / quarantine
+→ Evidence + provenance hash
 → UNKNOWN / Knowledge Debt
 → structured Report
-→ durable completion event
+→ durable completion state
 ```
 
-The slice deliberately treats consultant/model output as advisory evidence rather than verified fact.
+Consultant/model output remains advisory. It does not become VERIFIED merely because a model produced or summarized it.
 
-#### Research provider boundary
-- Mock provider for no-key demo/testing
-- OpenAI-compatible external provider adapter
-- external provider is blocked when dataClass is not allowed
-- allowed external calls create EXTERNAL_DISCLOSURE event
-- provider outage degrades honestly to UNKNOWN
+### CI / tests
+Current tests cover:
+- contracts;
+- router shadow behavior;
+- ToolBroker enforcement;
+- approval replay/task scope;
+- SQLite restart persistence;
+- stale-task recovery;
+- provider privacy;
+- external disclosure;
+- provider failure → UNKNOWN;
+- prompt-injection-like quarantine;
+- request policy downgrade prevention;
+- Product/R&D idempotency.
 
-Environment variables for a real OpenAI-compatible provider:
+GitHub Actions CI is enabled on push and pull request.
 
-```text
-OPENAI_COMPATIBLE_BASE_URL
-OPENAI_COMPATIBLE_API_KEY
-OPENAI_COMPATIBLE_MODEL
-```
+## Removed / retired
 
-No production API key is stored in the repository.
+The old V1 Product Council implementation and the fake evidence Product Lab workflow were removed from the active codebase. They conflicted with the V2 epistemic model.
 
-#### Eval / CI
-- initial 20 Product/R&D golden behavior cases
-- GitHub Actions CI
-- Node 22 test environment
-- latest test job: green
+## Partial / not yet complete
 
-## Runtime requirements
+The following are **not** complete yet:
 
-Node >= 22.5 is currently required because the first SQLite adapter uses `node:sqlite`.
-
-The core remains behind a Storage Adapter so another SQLite implementation or Postgres can replace it later.
-
-## Not yet implemented
-
-The following remain planned rather than complete:
-
-1. full SQLite repository layer with stronger domain queries/transactions;
-2. real provider credentials/live provider validation;
-3. independent Evidence Verifier;
-4. source fetching + trust hierarchy + prompt-injection scanner;
-5. Knowledge Steward promotion/versioning logic;
-6. Knowledge Debt deduplication service;
-7. Evolution Engine implementation;
-8. Proactive Engine A1 shadow mode;
-9. Laya/fast-router integration;
-10. Digital Employee runtime beyond software demo;
-11. durable queue/leases/idempotency for long-running daemon;
-12. browser/computer runtime;
-13. client/voice/discussion-room UI.
+1. Independent Evidence Verifier.
+2. Real primary/official source acquisition and trust hierarchy enforcement.
+3. Live validation against a real approved external provider.
+4. Knowledge Debt deduplication/merge service.
+5. Knowledge Steward promotion/versioning workflow.
+6. Executable Golden Eval runner + stored baselines/release gate.
+7. Laya / fast-reflex integration.
+8. Evolution Engine runtime.
+9. Proactive Engine A1 shadow.
+10. Digital Employee runtime beyond pure/mock software workers.
+11. Full durable queue / cancellation / resumable checkpoint executor.
+12. Credential vault/broker.
+13. Browser/computer runtime.
+14. Client/voice/discussion-room UI.
 
 ## Immediate next work
 
-1. Evidence Verifier + source trust pipeline.
-2. Upgrade storage with transactions/idempotency helpers.
-3. Run the Product/R&D slice against one real approved provider.
-4. Build executable golden-eval runner.
-5. Add Knowledge Steward and debt deduplication.
-6. Only then start proactive A1 shadow mode.
+1. Build Independent Evidence Verifier.
+2. Add source-trust policy and primary-source fetch adapters.
+3. Build executable Golden Eval runner.
+4. Add Knowledge Debt deduplication.
+5. Validate Product/R&D against one real approved provider.
+6. Only after those are stable, implement Knowledge Steward and A1 proactive shadow.
 
-## Current acceptance status
+## Acceptance status
 
-- durable Project/Task: PASS
-- durable Evidence/Report: PASS
-- honest provider failure: PASS
+- ToolBroker on active V2 research path: PASS
+- approval replay prevention: PASS
+- fail-closed resources: PASS
+- server-side actor/dataClass boundary: PASS
 - provider privacy blocking: PASS
-- external disclosure audit: PASS
-- ToolBroker/ApprovalGrant tests: PASS
-- SQLite restart persistence: PASS
+- prompt-injection quarantine: PASS
+- durable Project/Task/Evidence/Report: PASS
+- stale-task recovery: PASS
+- request idempotency: PASS
 - CI: PASS
-- real external research provider live test: NOT YET VERIFIED
-- independent factual verification: NOT YET IMPLEMENTED
+- independent factual verification: NOT IMPLEMENTED
+- live external provider verification: NOT YET VERIFIED
