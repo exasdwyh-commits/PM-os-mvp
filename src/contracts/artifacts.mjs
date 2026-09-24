@@ -4,20 +4,28 @@ import {
   assertEnum
 } from './domain.mjs';
 
+export const SOURCE_TYPES=Object.freeze([
+  'OFFICIAL','PRIMARY','REPUTABLE','EXTERNAL','MODEL_OUTPUT','MOCK','INTERNAL_VERIFIED'
+]);
+export const TRUST_TIERS=Object.freeze([
+  'OFFICIAL','PRIMARY','REPUTABLE','ADVISORY','UNRATED','QUARANTINED'
+]);
+
 function nowIso(now) { return (now ?? new Date()).toISOString(); }
 
 export function createEvidence(input = {}, now) {
   if (!input.title?.trim()) throw new TypeError('evidence.title is required');
+  const sourceType=assertEnum(input.sourceType ?? 'EXTERNAL',SOURCE_TYPES,'evidence.sourceType');
   return {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `EVD-${randomUUID()}`,
     title: input.title.trim(),
-    sourceType: input.sourceType ?? 'EXTERNAL',
+    sourceType,
     sourceUri: input.sourceUri ?? null,
     sourceName: input.sourceName ?? null,
-    trustTier: input.trustTier ?? 'UNRATED',
+    trustTier: assertEnum(input.trustTier ?? 'UNRATED',TRUST_TIERS,'evidence.trustTier'),
     dataClass: assertEnum(input.dataClass ?? 'PUBLIC', DATA_CLASSES, 'evidence.dataClass'),
-    untrustedInput: input.untrustedInput ?? input.sourceType === 'EXTERNAL',
+    untrustedInput: input.untrustedInput ?? !['OFFICIAL','INTERNAL_VERIFIED'].includes(sourceType),
     capturedAt: input.capturedAt ?? nowIso(now),
     sourceDate: input.sourceDate ?? null,
     contentHash: input.contentHash ?? null,
@@ -54,18 +62,20 @@ export function createReport(input = {}, now) {
 
 export function createApprovalGrant(input = {}, now) {
   if (!input.capability) throw new TypeError('approval.capability is required');
+  if (!input.resource) throw new TypeError('approval.resource is required');
   return {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `APR-${randomUUID()}`,
     approvedBy: input.approvedBy ?? null,
     taskId: input.taskId ?? null,
     capability: input.capability,
-    resource: input.resource ?? '*',
+    resource: input.resource,
     actionHash: input.actionHash ?? null,
     singleUse: input.singleUse ?? true,
     issuedAt: input.issuedAt ?? nowIso(now),
     validUntil: input.validUntil ?? null,
-    usedAt: input.usedAt ?? null
+    usedAt: input.usedAt ?? null,
+    usedByRunId: input.usedByRunId ?? null
   };
 }
 
