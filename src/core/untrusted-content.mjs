@@ -18,7 +18,7 @@ function cleanText(value,max=4000){
     .trim();
 }
 
-function inspect(text){
+export function scanExternalText(text){
   const clean=cleanText(text);
   const flags=SUSPICIOUS_PATTERNS
     .map((pattern,index)=>pattern.test(clean)?`pattern-${index+1}`:null)
@@ -37,7 +37,7 @@ export function sanitizeResearchPayload(payload={}){
   const securityFlags=[];
   const quarantinedItems=[];
 
-  const summaryCheck=inspect(payload.summary);
+  const summaryCheck=scanExternalText(payload.summary);
   if(summaryCheck.quarantined){
     securityFlags.push(...summaryCheck.flags.map(flag=>({field:'summary',flag})));
     quarantinedItems.push({field:'summary',reason:'instruction-like-content'});
@@ -45,7 +45,7 @@ export function sanitizeResearchPayload(payload={}){
 
   const claims=[];
   for(const raw of Array.isArray(payload.claims)?payload.claims:[]){
-    const c=inspect(raw?.claim);
+    const c=scanExternalText(raw?.claim);
     const area=cleanText(raw?.area ?? 'general',80) || 'general';
     const sourceUrls=(Array.isArray(raw?.sourceUrls)?raw.sourceUrls:[])
       .map(safeUrl).filter(Boolean).slice(0,10);
@@ -58,7 +58,7 @@ export function sanitizeResearchPayload(payload={}){
 
   const unknowns=[];
   for(const raw of Array.isArray(payload.unknowns)?payload.unknowns:[]){
-    const u=inspect(raw);
+    const u=scanExternalText(raw);
     if(u.quarantined){
       securityFlags.push(...u.flags.map(flag=>({field:'unknown',flag})));
       quarantinedItems.push({field:'unknown',reason:'instruction-like-content'});
@@ -70,7 +70,7 @@ export function sanitizeResearchPayload(payload={}){
 
   const suggestedNextActions=[];
   for(const raw of Array.isArray(payload.suggestedNextActions)?payload.suggestedNextActions:[]){
-    const a=inspect(raw);
+    const a=scanExternalText(raw);
     if(a.quarantined){
       securityFlags.push(...a.flags.map(flag=>({field:'nextAction',flag})));
       quarantinedItems.push({field:'nextAction',reason:'instruction-like-content'});
