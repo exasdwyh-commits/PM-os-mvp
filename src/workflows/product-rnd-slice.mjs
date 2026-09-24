@@ -2,9 +2,9 @@ import { createProject, createTask, createKnowledgeDebt } from '../contracts/dom
 import { createEvidence, createReport } from '../contracts/artifacts.mjs';
 import { createEvent } from '../contracts/events.mjs';
 
-function event(storage, input) {
+function event(storage, input, options) {
   const e=createEvent(input);
-  storage.appendEvent(e);
+  storage.appendEvent(e, options);
   return e;
 }
 
@@ -18,11 +18,12 @@ export async function runProductRndSlice({
   idea,
   storage,
   decisionPlane,
-  researchProvider,
+  researchExecutor,
   actor='user',
   dataClass='INTERNAL'
 }) {
   if (!idea?.trim()) throw new TypeError('idea is required');
+  if (!researchExecutor?.run) throw new TypeError('researchExecutor is required');
 
   const project=createProject({
     title:`Product R&D: ${idea.slice(0,80)}`,
@@ -58,44 +59,52 @@ export async function runProductRndSlice({
   task=updateTask(storage,task,{status:'RUNNING'});
   event(storage,{type:'TASK_STARTED',actor:'department-assistant',projectId:project.id,taskId:task.id});
 
-  let research;
+  const runId=`RUN-${task.id}`;
+  const execution=await researchExecutor.run({
+    taskId:task.id,
+    runId,
+    idea,
+    context:'Evaluate market, formulation, cost and compliance.',
+    dataClass
+  });
+
+  if (execution.externalAttempted) {
+    event(storage,{
+      type:'EXTERNAL_DISCLOSURE',
+      actor:'department-assistant',
+      projectId:project.id,
+      taskId:task.id,
+      payload:{provider:execution.provider.id,dataClass,purpose:'product-rnd-research'}
+    });
+  }
+
   let providerError=null;
-  const providerAllowed = (researchProvider.allowedDataClasses ?? ['PUBLIC']).includes(dataClass);
-  try {
-    if (!providerAllowed) throw new Error(`provider-not-allowed-for-data-class:${dataClass}`);
-    if (researchProvider.external) {
-      event(storage,{
-        type:'EXTERNAL_DISCLOSURE',
-        actor:'department-assistant',
-        projectId:project.id,
-        taskId:task.id,
-        payload:{provider:researchProvider.id,dataClass,purpose:'product-rnd-research'}
-      });
-    }
-    research=await researchProvider.research({idea,context:'Evaluate market, formulation, cost and compliance.'});
-  } catch (error) {
-    providerError=error.message;
+  let research;
+  if (execution.status === 'ok') {
+    research=execution.output;
+  } else {
+    providerError=execution.reason ?? 'research-unavailable';
     research={
-      summary:'Specialist research failed; no completion is claimed.',
+      summary:'Specialist research failed or was blocked; no completion is claimed.',
       claims:[],
       unknowns:['Specialist research unavailable'],
-      suggestedNextActions:['Retry with an available approved research provider.']
+      suggestedNextActions:['Retry with an available policy-compliant research provider.']
     };
   }
 
   const evidence=[];
-  for (const [i,claim] of research.claims.entries()) {
+  for (const claim of research.claims ?? []) {
     const e=createEvidence({
-      id:`EVD-${task.id}-${i+1}`,
-      title:`Consultant claim: ${claim.area}`,
-      sourceType:researchProvider.external ? 'MODEL_OUTPUT' : 'MOCK',
-      sourceName:researchProvider.id,
+      title:`Consultant claim: ${claim.area ?? 'general'}`,
+      sourceType:execution.provider.external ? 'MODEL_OUTPUT' : 'MOCK',
+      sourceName:execution.provider.id,
       trustTier:'ADVISORY',
       dataClass,
       untrustedInput:true,
       projectId:project.id,
       taskId:task.id,
-      metadata:{claim:claim.claim,sourceUrls:claim.sourceUrls}
+      sourceUri:Array.isArray(claim.sourceUrls) ? (claim.sourceUrls[0] ?? null) : null,
+      metadata:{claim:claim.claim,sourceUrls:claim.sourceUrls ?? []}
     });
     storage.put('evidence',e);
     evidence.push(e);
@@ -103,8 +112,8 @@ export async function runProductRndSlice({
   }
 
   const debts=[];
-  const unknowns=[...research.unknowns];
-  if (providerError) unknowns.unshift(`Provider failure: ${providerError}`);
+  const unknowns=[...(research.unknowns ?? [])];
+  if (providerError) unknowns.unshift(`Provider failure/block: ${providerError}`);
   for (const topic of unknowns) {
     const debt=createKnowledgeDebt({
       topic,
@@ -120,7 +129,7 @@ export async function runProductRndSlice({
   }
 
   task=updateTask(storage,task,{status:'VERIFYING'});
-  const conclusions=research.claims.map((claim,i)=>({
+  const conclusions=(research.claims ?? []).map((claim,i)=>({
     claim:claim.claim,
     claimKind:'FACT',
     evidenceLevel:'WEAK',
@@ -145,12 +154,12 @@ export async function runProductRndSlice({
     risks:['Consultant/model output is advisory and is not treated as verified external evidence.'],
     unresolvedQuestions:unknowns,
     knowledgeDebtIds:debts.map(x=>x.id),
-    nextActions:research.suggestedNextActions
+    nextActions:research.suggestedNextActions ?? []
   });
   storage.put('report',report);
 
   task=updateTask(storage,task,{status:'COMPLETED',reportId:report.id});
   event(storage,{type:'TASK_COMPLETED',actor:'department-assistant',projectId:project.id,taskId:task.id,payload:{reportId:report.id,providerError}});
 
-  return {project,task,route,report,evidence,knowledgeDebt:debts,provider:{id:researchProvider.id,error:providerError}};
+  return {project,task,route,report,evidence,knowledgeDebt:debts,provider:{id:execution.provider.id,error:providerError}};
 }
