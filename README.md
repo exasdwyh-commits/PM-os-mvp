@@ -1,68 +1,88 @@
 # PM OS MVP
 
-A standalone, zero-API-key reference implementation for the next PM / PM-next architecture.
+A standalone reference implementation for a **Department AI Assistant / AI Chief of Staff**: durable projects/tasks, governed tool execution, evidence-aware reporting, specialist delegation and controlled future autonomy.
 
-## Why this exists
-Do not bolt five external frameworks into PM-next. First prove the architectural seams in a tiny project, then let a local coding agent migrate the stable interfaces into the main system.
+## Runtime
 
-## Run
 ```bash
-node -v   # Node 20+
+node -v   # Node >= 22.5
 npm test
 npm run demo
 npm start
 ```
-Then open `http://localhost:8787`.
 
-No `npm install` is required because the MVP uses only Node built-ins.
+No `npm install` is required today; the MVP uses Node built-ins.
 
-## What the demo proves
-1. **Decision Plane** — classifies task difficulty/work/risk and recommends a model. Default is shadow mode.
-2. **Model Registry** — structured provider/model capabilities and routing pools.
-3. **Capability Gateway** — dangerous actions are gated and audited.
-4. **Workforce** — Coder → QA → Reviewer are separate actors with a bounded retry loop.
-5. **Product Council** — evidence → advocate → skeptic → risk → GO/TEST/HOLD.
-6. **Company Brain** — append-only decision memory ready for outcomes/reflections.
+If `PM_OS_API_TOKEN` is **not** configured, the HTTP server binds to `127.0.0.1` only.
+If a token is configured, API requests must use:
 
-## Switch router from shadow to active
-```bash
-ROUTER_MODE=on npm run demo
+```text
+Authorization: Bearer <PM_OS_API_TOKEN>
 ```
 
-## Important design rule
-A cheap decision model may choose from options that the system has already declared safe. It should not invent permissions, tools, model IDs or destructive actions.
+## Current V2 vertical slice
 
-## Recommended local-agent reading order
-1. `docs/ARCHITECTURE.md`
-2. `src/core/decision-plane.mjs`
-3. `src/core/capability-gateway.mjs`
-4. `src/core/workforce.mjs`
-5. `src/core/decision-council.mjs`
-6. `docs/MIGRATION_TO_PM_NEXT.md`
+```text
+POST /api/v2/product-rnd
+idea
+→ Project + Task
+→ routing recommendation
+→ ToolBroker-governed research execution
+→ Evidence
+→ quarantine / UNKNOWN / Knowledge Debt
+→ structured Report
+→ durable Event/Audit state
+```
 
+The request may ask for a **higher** `dataClass`, but it cannot lower the server/project baseline configured by `PROJECT_DATA_CLASS`.
 
-## V2 direction: Department AI Assistant
+For retry-safe requests, send an `Idempotency-Key` header.
 
-The repository is now moving from a routing/governance demo toward a department-level AI chief-of-staff.
+## Research provider
 
-Core design and implementation order:
+The repository runs without an API key using a mock provider.
+
+An OpenAI-compatible provider can be enabled with:
+
+```text
+OPENAI_COMPATIBLE_BASE_URL
+OPENAI_COMPATIBLE_API_KEY
+OPENAI_COMPATIBLE_MODEL
+```
+
+Provider/model access remains constrained by data classification policy. External output is treated as **untrusted advisory content**, not verified evidence.
+
+## Security / governance properties already implemented
+
+- runtime-bound identities for governed executors;
+- per-call ToolBroker boundary for the V2 research path;
+- fail-closed capability/resource policy;
+- durable scoped ApprovalGrant storage;
+- atomic single-use approval consumption;
+- task/resource approval binding;
+- persisted audit records;
+- PUBLIC / INTERNAL / CONFIDENTIAL / RESTRICTED routing constraints;
+- external disclosure audit events;
+- external-content sanitization + quarantine;
+- stale active-task recovery to PAUSED;
+- request idempotency primitives;
+- SQLite persistence behind a Storage Adapter.
+
+Legacy V1 Product Council / fake evidence demo paths were removed from the active runtime.
+
+## Authoritative reading order
 
 1. [Department Agent V2 Blueprint](docs/DEPARTMENT_AGENT_V2_BLUEPRINT.md)
 2. [V2 Implementation Roadmap](docs/V2_IMPLEMENTATION_ROADMAP.md)
 3. [V2 Glossary](docs/GLOSSARY.md)
-4. [Local Agent Handoff](docs/LOCAL_AGENT_HANDOFF.md)
-5. [Golden Eval Cases](evals/README.md)
+4. [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
+5. [Local Agent Handoff](docs/LOCAL_AGENT_HANDOFF.md)
+6. [Golden Eval Cases](evals/README.md)
 
-V2 adds:
-- one conversational entry point for managers;
-- durable Project / Task state;
-- direct vs delegated vs executive collaboration modes;
-- fast System-1 routing with safe fallbacks;
-- expert/model registry;
-- explicit VERIFIED / INFERRED / UNCERTAIN / UNKNOWN knowledge states;
-- Knowledge Steward + Knowledge Debt;
-- controlled self-evolution and improvement requirements;
-- user-correction learning and regression cases;
-- outcome-linked organizational memory.
+`docs/ARCHITECTURE.md` is a V1 reference only.
 
-Current Phase 0 contracts live under `src/contracts/`.
+## Core rule
+
+Fast models such as Laya/System-1 may classify, route and rank. They do not grant permissions, establish facts, or override Sentinel / ToolBroker policy.
+
+Likewise, model agreement is not evidence. Unsupported claims may remain `UNKNOWN`.
