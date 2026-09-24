@@ -14,13 +14,17 @@ export class SourceFetchExecutor {
   async fetch({taskId,runId,url}) {
     let host;
     try { host=new URL(url).hostname; } catch { return {status:'blocked',reason:'invalid-source-url'}; }
-    return this.broker.call({
-      tool:'fetchSource',
-      capability:'source.fetch',
-      resource:`source:${host}`,
-      taskId,
-      runId,
-      input:{url}
-    });
+    try {
+      return await this.broker.call({
+        tool:'fetchSource',
+        capability:'source.fetch',
+        resource:`source:${host}`,
+        taskId,
+        runId,
+        input:{url}
+      });
+    } catch (error) {
+      return {status:'failed',reason:error.message};
+    }
   }
 }
