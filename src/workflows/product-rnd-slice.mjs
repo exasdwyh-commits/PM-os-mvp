@@ -60,7 +60,18 @@ export async function runProductRndSlice({
 
   let research;
   let providerError=null;
+  const providerAllowed = (researchProvider.allowedDataClasses ?? ['PUBLIC']).includes(dataClass);
   try {
+    if (!providerAllowed) throw new Error(`provider-not-allowed-for-data-class:${dataClass}`);
+    if (researchProvider.external) {
+      event(storage,{
+        type:'EXTERNAL_DISCLOSURE',
+        actor:'department-assistant',
+        projectId:project.id,
+        taskId:task.id,
+        payload:{provider:researchProvider.id,dataClass,purpose:'product-rnd-research'}
+      });
+    }
     research=await researchProvider.research({idea,context:'Evaluate market, formulation, cost and compliance.'});
   } catch (error) {
     providerError=error.message;
