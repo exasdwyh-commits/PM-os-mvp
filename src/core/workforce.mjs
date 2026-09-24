@@ -1,8 +1,8 @@
 export class Workforce {
   constructor({ gateway }) { this.gateway = gateway; }
 
-  async runTask({ agent, role, capability, input, worker, unattended = false, approved = false }) {
-    const gate = this.gateway.check({ agent, role, capability, unattended, approved });
+  async runTask({ identity, capability, resource = '*', taskId = null, input, worker, unattended = false, approvalGrant = null }) {
+    const gate = this.gateway.check({ identity, capability, resource, taskId, unattended, approvalGrant });
     if (!gate.allowed) return { status: 'blocked', gate };
     try {
       const output = await worker(input);
