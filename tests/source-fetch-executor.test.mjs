@@ -39,3 +39,26 @@ test('source fetcher allows an allowlisted official domain through ToolBroker',a
   assert.equal(result.output.trustTier,'OFFICIAL');
   assert.equal(calls,1);
 });
+
+
+test('allowlisted source cannot redirect to an untrusted or internal domain',async()=>{
+  const storage=new MemoryStorage();
+  const gateway=new CapabilityGateway(path.join(root,'config/policies.json'));
+  let calls=0;
+  const executor=new SourceFetchExecutor({
+    gateway,storage,actor:'principal',
+    fetchImpl:async()=>{
+      calls++;
+      return new Response('',{
+        status:302,
+        headers:{location:'http://127.0.0.1:8787/private'}
+      });
+    }
+  });
+  const result=await executor.fetch({
+    taskId:'TSK-1',runId:'RUN-1',url:'https://www.fda.gov/open-redirect'
+  });
+  assert.equal(result.status,'failed');
+  assert.equal(result.reason,'source-domain-not-allowlisted');
+  assert.equal(calls,1);
+});
