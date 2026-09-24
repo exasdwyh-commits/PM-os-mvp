@@ -63,6 +63,7 @@ export function createReport(input = {}, now) {
     unresolvedQuestions: [...(input.unresolvedQuestions ?? [])],
     knowledgeDebtIds: [...(input.knowledgeDebtIds ?? [])],
     nextActions: [...(input.nextActions ?? [])],
+    advisoryNotes: [...(input.advisoryNotes ?? [])],
     costSummary: input.costSummary ?? null,
     verifierRunId: input.verifierRunId ?? null,
     verifierIdentity: input.verifierIdentity ?? null,
