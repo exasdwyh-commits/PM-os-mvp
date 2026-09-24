@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEMA_VERSION = '2.1.0-mvp';
+export const SCHEMA_VERSION = '2.2.0-mvp';
 
 export const COLLABORATION_MODES = Object.freeze(['ASSISTANT','DELEGATION','EXECUTIVE']);
 export const TASK_STATUS = Object.freeze([
@@ -8,6 +8,7 @@ export const TASK_STATUS = Object.freeze([
   'WAITING_HUMAN','BLOCKED','VERIFYING','COMPLETED','FAILED','CANCELLED'
 ]);
 export const TASK_ORIGINS = Object.freeze(['USER','PROACTIVE','SCHEDULED','SYSTEM']);
+export const TASK_STAGES = Object.freeze(['INTAKE','PLAN','EXECUTE','VERIFY','REPORT','LEARN']);
 export const AUTONOMY_LEVELS = Object.freeze(['A0','A1','A2','A3','A4']);
 export const DATA_CLASSES = Object.freeze(['PUBLIC','INTERNAL','CONFIDENTIAL','RESTRICTED']);
 export const RISK_LEVELS = Object.freeze(['LOW','MEDIUM','HIGH','CRITICAL']);
@@ -58,6 +59,7 @@ export function createTask(input = {}, now) {
     request: input.request ?? '',
     mode: assertEnum(input.mode ?? 'ASSISTANT', COLLABORATION_MODES, 'task.mode'),
     status: assertEnum(input.status ?? 'INTAKE', TASK_STATUS, 'task.status'),
+    stage: assertEnum(input.stage ?? 'INTAKE', TASK_STAGES, 'task.stage'),
     origin: assertEnum(input.origin ?? 'USER', TASK_ORIGINS, 'task.origin'),
     autonomyLevel: assertEnum(input.autonomyLevel ?? 'A0', AUTONOMY_LEVELS, 'task.autonomyLevel'),
     risk: assertEnum(input.risk ?? 'LOW', RISK_LEVELS, 'task.risk'),
@@ -69,6 +71,10 @@ export function createTask(input = {}, now) {
     ownerAgent: input.ownerAgent ?? 'department-assistant',
     assignedExperts: [...(input.assignedExperts ?? [])],
     checkpoint: input.checkpoint ?? null,
+    lastCheckpointStage: input.lastCheckpointStage ?? null,
+    attempt: input.attempt ?? 0,
+    runId: input.runId ?? null,
+    leaseUntil: input.leaseUntil ?? null,
     reportId: input.reportId ?? null,
     createdAt: input.createdAt ?? nowIso(now),
     updatedAt: input.updatedAt ?? nowIso(now),
