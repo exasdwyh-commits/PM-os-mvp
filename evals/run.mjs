@@ -5,6 +5,7 @@ import { MemoryStorage } from '../src/storage/memory-storage.mjs';
 import { createRepositories } from '../src/repositories/domain-repositories.mjs';
 import { CapabilityGateway } from '../src/core/capability-gateway.mjs';
 import { ResearchExecutor } from '../src/core/research-executor.mjs';
+import { ToolBroker } from '../src/core/tool-broker.mjs';
 import { EvidenceVerifier } from '../src/core/evidence-verifier.mjs';
 import { KnowledgeDebtService } from '../src/core/knowledge-debt-service.mjs';
 import { sanitizeResearchPayload } from '../src/core/untrusted-content.mjs';
@@ -16,6 +17,8 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const golden=JSON.parse(fs.readFileSync(path.join(root,'evals/product-rnd-golden.json'),'utf8'));
 const baseline=JSON.parse(fs.readFileSync(path.join(root,'evals/baseline.json'),'utf8'));
 const baselineCases=baseline.cases ?? (baseline.caseIds ?? []).map(id=>({id,required:true}));
+
+let currentCaseDef=null;
 
 const decisionPlane={
   route:async()=>({recommendedModel:'frontier',selectedModel:'balanced',shadow:true,reason:'eval'})
@@ -33,7 +36,7 @@ function harness(provider){
 async function runSlice(provider,overrides={}){
   const h=harness(provider);
   const result=await runProductRndSlice({
-    idea:overrides.idea ?? overrides.caseDef?.input ?? 'Golden eval product',
+    idea:overrides.idea ?? overrides.caseDef?.input ?? currentCaseDef?.input ?? 'Golden eval product',
     dataClass:overrides.dataClass ?? 'INTERNAL',
     actor:'eval-principal',
     repositories:h.repositories,
@@ -166,9 +169,12 @@ for(const baselineCase of baselineCases){
   }
   try{
     const caseDef=requested.get(caseId);
+    currentCaseDef=caseDef;
     const pass=Boolean(await fn(caseDef));
+    currentCaseDef=null;
     results.push({id:caseId,required:Boolean(baselineCase.required),pass,category:caseDef?.category ?? null});
   }catch(error){
+    currentCaseDef=null;
     results.push({id:caseId,required:Boolean(baselineCase.required),pass:false,error:error.message});
   }
 }
