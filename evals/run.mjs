@@ -10,10 +10,12 @@ import { KnowledgeDebtService } from '../src/core/knowledge-debt-service.mjs';
 import { sanitizeResearchPayload } from '../src/core/untrusted-content.mjs';
 import { runProductRndSlice } from '../src/workflows/product-rnd-slice.mjs';
 import { MockResearchProvider } from '../src/adapters/research-provider.mjs';
+import { createApprovalGrant } from '../src/contracts/artifacts.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const golden=JSON.parse(fs.readFileSync(path.join(root,'evals/product-rnd-golden.json'),'utf8'));
 const baseline=JSON.parse(fs.readFileSync(path.join(root,'evals/baseline.json'),'utf8'));
+const baselineCases=baseline.cases ?? (baseline.caseIds ?? []).map(id=>({id,required:true}));
 
 const decisionPlane={
   route:async()=>({recommendedModel:'frontier',selectedModel:'balanced',shadow:true,reason:'eval'})
@@ -31,7 +33,7 @@ function harness(provider){
 async function runSlice(provider,overrides={}){
   const h=harness(provider);
   const result=await runProductRndSlice({
-    idea:overrides.idea ?? 'Golden eval product',
+    idea:overrides.idea ?? overrides.caseDef?.input ?? 'Golden eval product',
     dataClass:overrides.dataClass ?? 'INTERNAL',
     actor:'eval-principal',
     repositories:h.repositories,
@@ -102,6 +104,46 @@ const checks={
     return result.report.conclusions[0]?.evidenceLevel==='UNKNOWN' &&
       result.report.unresolvedQuestions.some(x=>x.includes('Provider failure'));
   },
+  'G-013': async c=>{
+    const {storage,result}=await runSlice(new MockResearchProvider(),{caseDef:c});
+    const evidenceIds=result.report.conclusions.flatMap(x=>x.evidenceIds ?? []);
+    return Boolean(
+      result.report.executiveSummary &&
+      result.report.decisionsRequired.length &&
+      result.report.risks.length &&
+      result.report.unresolvedQuestions.length &&
+      result.report.verifierRunId &&
+      result.report.verifierIdentity &&
+      evidenceIds.every(id=>Boolean(storage.get('evidence',id)))
+    );
+  },
+  'G-015': async()=>{
+    const storage=new MemoryStorage();
+    const gateway=new CapabilityGateway(path.join(root,'config/policies.json'));
+    const grant=createApprovalGrant({
+      id:'APR-EVAL',
+      approvedBy:'eval-principal',
+      taskId:'TSK-EVAL',
+      capability:'git.merge',
+      resource:'refs/heads/feature/allowed'
+    });
+    storage.putApproval(grant);
+    const broker=new ToolBroker({
+      gateway,
+      identity:{role:'ENGINEER',actor:'eval-principal',agent:'eval-engineer'},
+      storage,
+      approvalService:{verify:()=>true},
+      tools:{merge:async()=>true}
+    });
+    const result=await broker.call({
+      tool:'merge',
+      capability:'git.merge',
+      resource:'refs/heads/feature/other',
+      taskId:'TSK-EVAL',
+      approvalGrantId:grant.id
+    });
+    return result.status==='blocked';
+  },
   'G-018': async()=>{
     const storage=new MemoryStorage();
     const repositories=createRepositories(storage);
@@ -115,28 +157,33 @@ const checks={
 
 const requested=new Map(golden.cases.map(c=>[c.id,c]));
 const results=[];
-for(const caseId of baseline.caseIds){
+for(const baselineCase of baselineCases){
+  const caseId=baselineCase.id;
   const fn=checks[caseId];
   if(!fn){
-    results.push({id:caseId,pass:false,error:'case-not-implemented'});
+    results.push({id:caseId,required:Boolean(baselineCase.required),pass:false,error:'case-not-implemented'});
     continue;
   }
   try{
-    const pass=Boolean(await fn());
-    results.push({id:caseId,pass,category:requested.get(caseId)?.category ?? null});
+    const caseDef=requested.get(caseId);
+    const pass=Boolean(await fn(caseDef));
+    results.push({id:caseId,required:Boolean(baselineCase.required),pass,category:caseDef?.category ?? null});
   }catch(error){
-    results.push({id:caseId,pass:false,error:error.message});
+    results.push({id:caseId,required:Boolean(baselineCase.required),pass:false,error:error.message});
   }
 }
 
 const passed=results.filter(x=>x.pass).length;
+const requiredFailures=results.filter(x=>x.required && !x.pass);
 const summary={
   baselineVersion:baseline.version,
+  runnerVersion:baseline.runnerVersion ?? null,
   goldenVersion:golden.version,
+  nodeVersion:process.version,
   passed,
   total:results.length,
-  requiredPass:baseline.requiredPass,
+  requiredFailures:requiredFailures.map(x=>x.id),
   results
 };
 console.log(JSON.stringify(summary,null,2));
-if(passed < baseline.requiredPass) process.exitCode=1;
+if(requiredFailures.length) process.exitCode=1;
