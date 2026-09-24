@@ -49,7 +49,9 @@ Core design and implementation order:
 
 1. [Department Agent V2 Blueprint](docs/DEPARTMENT_AGENT_V2_BLUEPRINT.md)
 2. [V2 Implementation Roadmap](docs/V2_IMPLEMENTATION_ROADMAP.md)
-3. [Local Agent Handoff](docs/LOCAL_AGENT_HANDOFF.md)
+3. [V2 Glossary](docs/GLOSSARY.md)
+4. [Local Agent Handoff](docs/LOCAL_AGENT_HANDOFF.md)
+5. [Golden Eval Cases](evals/README.md)
 
 V2 adds:
 - one conversational entry point for managers;
