@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEMA_VERSION = '2.2.0-mvp';
+export const SCHEMA_VERSION = '2.3.0-mvp';
 
 export const COLLABORATION_MODES = Object.freeze(['ASSISTANT','DELEGATION','EXECUTIVE']);
 export const TASK_STATUS = Object.freeze([
@@ -121,6 +121,10 @@ export function createKnowledgeDebt(input = {}, now) {
     suggestedExperts: [...(input.suggestedExperts ?? [])],
     projectId: input.projectId ?? null,
     taskId: input.taskId ?? null,
+    taskIds: [...(input.taskIds ?? (input.taskId ? [input.taskId] : []))],
+    resolvedByEvidenceId: input.resolvedByEvidenceId ?? null,
+    resolvedAt: input.resolvedAt ?? null,
+    resolutionStatus: input.resolutionStatus ?? null,
     status: input.status ?? 'OPEN',
     occurrences: input.occurrences ?? 1,
     createdAt: input.createdAt ?? nowIso(now),
