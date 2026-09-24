@@ -10,15 +10,10 @@ export class ToolBroker {
     this.#gateway = gateway;
     this.#identity = Object.freeze({ ...identity });
     this.#storage = storage;
-    this.#tools = { ...tools };
+    this.#tools = Object.freeze({ ...tools });
   }
 
   get identity() { return { ...this.#identity }; }
-
-  register(name, fn) {
-    if (typeof fn !== 'function') throw new TypeError('tool must be a function');
-    this.#tools[name] = fn;
-  }
 
   async call({
     tool,
