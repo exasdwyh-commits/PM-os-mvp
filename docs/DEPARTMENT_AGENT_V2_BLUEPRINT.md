@@ -750,3 +750,239 @@ Expected behavior:
 13. require human participation before major irreversible decisions.
 
 If this works well, the architecture is ready for deeper integration.
+
+
+---
+
+## 22. Long-term client experience: Conversational Company OS
+
+The long-term product should hide nearly all operational complexity from normal managers.
+
+### Default client surface
+
+For non-specialist work, the client can be almost entirely:
+
+```text
+Conversation
++
+Schedule / reminders
++
+Notifications / approvals
++
+Daily / weekly summaries
+```
+
+The user should not need to open internal agent pages, workflow editors, model selectors or raw execution panels.
+
+### Professional work
+
+Professional tasks still begin from conversation.
+
+Example:
+
+> “开发一个女性餐前轻体饮，市场、配方、成本、法规一起看。”
+
+The assistant runs the internal system, then the user mainly sees:
+
+- executive product report;
+- evidence and risk summary;
+- unresolved questions;
+- recommendation/decision points;
+- project progress;
+- Gantt chart or Kanban board when needed.
+
+Detailed internals are drill-down views, not the default interface.
+
+### Voice
+
+The client should eventually support voice as a first-class interface:
+
+```text
+Voice request
+↓
+Department Assistant
+↓
+Task / Project / Expert orchestration
+↓
+Voice or report response
+```
+
+Voice is not a separate product; it is another input/output surface over the same durable project/task system.
+
+### Multi-agent discussion rooms
+
+For important work, the user can open a temporary discussion room with selected specialist agents.
+
+Example:
+
+```text
+User
+├── Department Assistant / Moderator
+├── Product Expert
+├── Market Research Expert
+├── Cost Expert
+└── Compliance Expert
+```
+
+The Department Assistant should:
+- prepare shared context;
+- prevent duplicated discussion;
+- surface disagreement;
+- keep an evidence ledger;
+- summarize decisions;
+- convert conclusions into tasks;
+- update project memory after the meeting.
+
+The user should never need to manually coordinate the agents.
+
+---
+
+## 23. Digital Employee model
+
+The system should evolve from “multiple AI tools” into “digital employees”.
+
+Each digital employee is:
+
+```text
+Role
++ Skills
++ Knowledge scope
++ Permissions
++ Default experts/models
++ Workflows
++ Quality standards
++ KPI / evaluation signals
++ Memory
+```
+
+Examples:
+
+- Product R&D Employee
+- Market Research Employee
+- Scientific Evidence Employee
+- Cost & BOM Employee
+- Compliance Employee
+- Software Engineering Employee
+- QA Employee
+- Operations Employee
+
+They are not independent chatbots. The Department Assistant supervises and coordinates them as a manager/chief of staff.
+
+---
+
+## 24. One-person team operating model
+
+The long-term goal is to make one human capable of operating a much larger effective team.
+
+```text
+Human Leader
+      │
+Department Assistant
+      │
+┌─────┼──────────────┐
+↓     ↓              ↓
+R&D   Research      Operations
+↓     ↓              ↓
+Digital Employees / Specialist Agents
+      │
+      ↓
+Automated execution
+      │
+      ↓
+QA / Review / Evaluation
+      │
+      ↓
+Executive report
+      │
+      ↓
+Human decision only where valuable
+```
+
+The human spends time primarily on:
+- strategy;
+- taste/judgment;
+- irreversible decisions;
+- relationship/negotiation;
+- final review of major work.
+
+The system handles:
+- decomposition;
+- coordination;
+- follow-up;
+- routine verification;
+- documentation;
+- project tracking;
+- knowledge maintenance;
+- regression;
+- repetitive operations.
+
+---
+
+## 25. UI principle: report-first, system-second
+
+Do not reproduce traditional enterprise software navigation unnecessarily.
+
+Default views should be:
+
+1. **Conversation**
+2. **Today / Schedule**
+3. **Approvals**
+4. **Reports**
+5. **Projects**
+
+Only when the user enters a project should they see:
+- product report;
+- timeline;
+- Kanban;
+- Gantt;
+- decisions;
+- evidence;
+- files;
+- risks;
+- specialist discussion history.
+
+Raw agent traces, model prompts and internal orchestration belong in an advanced/debug layer.
+
+The assistant should be more meticulous than a human operator in routine follow-up, but all high-impact actions remain auditable and governed.
+
+---
+
+## 26. “Unmanned factory” workflow
+
+For repeatable professional domains such as product development:
+
+```text
+Idea
+↓
+Opportunity research
+↓
+Market validation
+↓
+Product concept
+↓
+Formula / specification
+↓
+Costing
+↓
+Compliance review
+↓
+Risk review
+↓
+Internal QA
+↓
+Product report
+↓
+Human decision
+↓
+Project execution
+↓
+Outcome tracking
+↓
+Reflection / evolution
+```
+
+Most intermediate steps should be performed automatically by digital employees.
+
+The user consumes the **product report and decision points**, not the raw process.
+
+This is the target operating model for PM OS.
