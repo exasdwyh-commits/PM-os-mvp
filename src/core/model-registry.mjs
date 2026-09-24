@@ -9,16 +9,17 @@ export class ModelRegistry {
 
   get(id) { return this.models.get(id); }
 
-  select({ tier, workKind, requiresVision = false, contextTokens = 0 }) {
+  select({ tier, workKind, requiresVision = false, contextTokens = 0, dataClass = 'INTERNAL' }) {
     const tierPool = this.pools[tier] ?? this.pools.medium;
     const candidates = tierPool[workKind] ?? tierPool.general ?? [];
     for (const id of candidates) {
       const model = this.models.get(id);
-      if (!model) continue;
+      if (!model || model.availability === 'UNAVAILABLE') continue;
       if (requiresVision && !model.vision) continue;
       if (contextTokens > model.maxContext) continue;
+      if (!(model.allowedDataClasses ?? []).includes(dataClass)) continue;
       return model;
     }
-    return this.models.get('frontier');
+    return null;
   }
 }
