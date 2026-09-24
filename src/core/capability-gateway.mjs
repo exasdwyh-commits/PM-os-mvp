@@ -18,9 +18,10 @@ function validApproval(grant, { capability, resource, taskId, actionHash, now = 
 }
 
 export class CapabilityGateway {
-  constructor(path) {
+  constructor(path, { auditSink = null } = {}) {
     this.policy = JSON.parse(fs.readFileSync(path, 'utf8'));
     this.audit = [];
+    this.auditSink = auditSink;
   }
 
   check({
@@ -55,6 +56,7 @@ export class CapabilityGateway {
       taskId, unattended, approvalGrantId: approvalGrant?.id ?? null, allowed, reason
     };
     this.audit.push(row);
+    this.auditSink?.(row);
     return row;
   }
 }
