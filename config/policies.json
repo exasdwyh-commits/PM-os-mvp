@@ -1,0 +1,11 @@
+{
+  "roles": {
+    "PM": ["memory.read","decision.route","council.run","task.delegate","artifact.read"],
+    "ENGINEER": ["artifact.read","artifact.write","shell.test","git.diff"],
+    "QA": ["artifact.read","shell.test","report.write"],
+    "RESEARCH": ["web.search","artifact.read","report.write"],
+    "SYSTEM": ["*"]
+  },
+  "approvalRequired": ["git.merge","deploy.production","database.migrate","artifact.delete","secret.read"],
+  "denyUnattended": ["git.merge","deploy.production","database.migrate","secret.read"]
+}
