@@ -183,3 +183,46 @@ The latest independent review identified several remaining issues that were stil
 - Golden Eval is executable in CI with an initial 8-case baseline.
 
 Important limitation: the current verifier proves **provenance/fetchability/trust-tier conditions**, not full semantic entailment between a claim and source text. VERIFIED remains intentionally unreachable in this v0.1 implementation.
+
+
+## 2026-09-24 review remediation milestone
+
+The latest dual-review pass identified several valid issues in the hardened V2 path. The following are now fixed in current main:
+
+- SQLite idempotency uses a composite `(namespace,key)` primary key and migrates the legacy key-only schema.
+- The production SQLite adapter now has a regression test proving one idempotency key can coexist across workflow namespaces.
+- Product/R&D retry is regression-tested on SQLite, not only MemoryStorage.
+- ToolBroker tool registry is immutable after construction; public `register()` is removed.
+- ResearchExecutor and SourceFetchExecutor keep their brokers private.
+- ApprovalService now issues principal-bound, task/resource/actionHash/expiry-scoped single-use grants with HMAC integrity; ToolBroker rejects unsigned or tampered grants.
+- Typed repositories no longer expose the raw storage escape hatch.
+- Source trust moved from broad suffix matching to explicit HTTPS hosts with organization identities.
+- Verifier independently reclassifies source URLs and ignores caller-supplied trust labels.
+- 3xx responses are never usable evidence.
+- `fda.gov` and `www.fda.gov` count as the same organization.
+- Provenance/fetchability alone no longer produces SUPPORTED: a rules-only verifier must derive a support span from fetched source text.
+- Rules-only verification still never emits VERIFIED.
+- Source Fetcher resolves DNS before connection, rejects loopback/private/link-local/metadata/reserved addresses, pins HTTPS connection lookup to a validated public IP, and verifies the remote address.
+- Source Fetcher accepts only an explicit MIME allowlist and rejects compressed, binary and empty success responses.
+- Redirect targets are revalidated on every hop.
+- Model-generated summary and suggested actions are stored only as `UNTRUSTED_ADVISORY`; executiveSummary and nextActions are system-generated.
+- Prompt-injection/exfiltration patterns were expanded, but regex scanning remains defense-in-depth rather than the primary safety boundary.
+- Golden Eval baseline v0.2 uses per-case `required` semantics rather than a pass-count threshold.
+- G-013 Report provenance and G-015 approval resource-scope are now executable required cases.
+- Golden inputs now drive the eval fixtures rather than being ignored.
+
+Current CI runs on Node 22 and requires both:
+- `npm test`
+- `npm run eval:golden`
+
+### Still open after this remediation
+
+These are important but are not claimed as complete:
+
+1. Full semantic claim-to-source entailment beyond conservative exact/support-span rules, including contradiction handling.
+2. Lease renewal plus true stage resume/re-entry after crash; current recovery still pauses stale work.
+3. Atomic/domain-indexed KnowledgeDebt upsert and semantic near-duplicate merge suggestions.
+4. Rich Router/Laya telemetry: latency, token/cost, actual model/provider, fallback reason, human correction and report acceptance.
+5. Approval HTTP/user experience and protected outbound-action adapters.
+6. Stronger eval history/diff artifacts across commits and more required cases (conflict, freshness, external send).
+7. Credential broker/vault and later browser/computer runtime.
