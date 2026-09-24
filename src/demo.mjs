@@ -1,16 +1,19 @@
-import { decisionPlane, gateway, brain, workforce, council } from './runtime.mjs';
-import { workers } from './adapters/mock-workers.mjs';
-import { runProductLab } from './workflows/product-lab.mjs';
-import { runDevLoop } from './workflows/dev-loop.mjs';
+import { decisionPlane, gateway, storage } from './runtime.mjs';
+import { MockResearchProvider } from './adapters/research-provider.mjs';
+import { ResearchExecutor } from './core/research-executor.mjs';
+import { runProductRndSlice } from './workflows/product-rnd-slice.mjs';
 
 const idea = process.argv.slice(2).join(' ') || 'AI waiting-area multiplayer entertainment system';
-const product = await runProductLab({ idea, decisionPlane, council, brain });
-const development = await runDevLoop({ spec: `Build MVP for: ${idea}`, workforce, workers });
-const dangerous = gateway.check({
-  identity:{ role:'ENGINEER', actor:'demo-user', agent:'coder-1' },
-  capability:'deploy.production',
-  resource:'production',
-  unattended:true
+const provider=new MockResearchProvider();
+const researchExecutor=new ResearchExecutor({
+  gateway,storage,provider,actor:'demo-principal'
 });
-
-console.log(JSON.stringify({ product, development, dangerousActionExample: dangerous, audit: gateway.audit }, null, 2));
+const result=await runProductRndSlice({
+  idea,
+  storage,
+  decisionPlane,
+  researchExecutor,
+  actor:'demo-principal',
+  dataClass:'INTERNAL'
+});
+console.log(JSON.stringify(result,null,2));
