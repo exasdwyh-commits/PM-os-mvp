@@ -27,37 +27,69 @@ async function readLimitedBody(response,maxBytes){
   return text;
 }
 
-export async function fetchSource({url,fetchImpl=globalThis.fetch,timeoutMs=6000,maxBytes=131072}){
+function assertAllowedUrl(url){
   const classified=classifySourceUrl(url);
   if(!classified.host) throw new Error('invalid-source-url');
+  if(!['OFFICIAL','PRIMARY','REPUTABLE'].includes(classified.trustTier)){
+    throw new Error('source-domain-not-allowlisted');
+  }
+  return classified;
+}
+
+export async function fetchSource({
+  url,
+  fetchImpl=globalThis.fetch,
+  timeoutMs=6000,
+  maxBytes=131072,
+  maxRedirects=3
+}){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  let currentUrl=url;
+  let redirects=0;
+
   try{
-    const response=await fetchImpl(url,{
-      method:'GET',
-      redirect:'follow',
-      signal:controller.signal,
-      headers:{'user-agent':'PM-OS-EvidenceFetcher/0.1'}
-    });
-    const declared=Number(response.headers?.get?.('content-length') ?? 0);
-    if(declared && declared > maxBytes) throw new Error('source-too-large');
-    const raw=await readLimitedBody(response,maxBytes);
-    const scan=scanExternalText(raw);
-    const finalUrl=response.url || url;
-    const finalClass=classifySourceUrl(finalUrl);
-    return {
-      url:finalUrl,
-      requestedUrl:url,
-      httpStatus:response.status,
-      ok:response.ok,
-      fetchedAt:new Date().toISOString(),
-      contentHash:createHash('sha256').update(raw,'utf8').digest('hex'),
-      rawContentPreview:scan.text.slice(0,12000),
-      injectionScanResult:{quarantined:scan.quarantined,flags:scan.flags},
-      sourceType:finalClass.sourceType,
-      trustTier:scan.quarantined ? 'QUARANTINED' : finalClass.trustTier,
-      host:finalClass.host
-    };
+    while(true){
+      assertAllowedUrl(currentUrl);
+      const response=await fetchImpl(currentUrl,{
+        method:'GET',
+        redirect:'manual',
+        signal:controller.signal,
+        headers:{'user-agent':'PM-OS-EvidenceFetcher/0.1'}
+      });
+
+      if(response.status >= 300 && response.status < 400){
+        const location=response.headers?.get?.('location');
+        if(!location) throw new Error('redirect-without-location');
+        if(redirects >= maxRedirects) throw new Error('too-many-redirects');
+        currentUrl=new URL(location,currentUrl).toString();
+        assertAllowedUrl(currentUrl);
+        redirects++;
+        continue;
+      }
+
+      const declared=Number(response.headers?.get?.('content-length') ?? 0);
+      if(declared && declared > maxBytes) throw new Error('source-too-large');
+      const raw=await readLimitedBody(response,maxBytes);
+      const scan=scanExternalText(raw);
+      const finalUrl=response.url || currentUrl;
+      const finalClass=assertAllowedUrl(finalUrl);
+
+      return {
+        url:finalUrl,
+        requestedUrl:url,
+        redirectCount:redirects,
+        httpStatus:response.status,
+        ok:response.ok,
+        fetchedAt:new Date().toISOString(),
+        contentHash:createHash('sha256').update(raw,'utf8').digest('hex'),
+        rawContentPreview:scan.text.slice(0,12000),
+        injectionScanResult:{quarantined:scan.quarantined,flags:scan.flags},
+        sourceType:finalClass.sourceType,
+        trustTier:scan.quarantined ? 'QUARANTINED' : finalClass.trustTier,
+        host:finalClass.host
+      };
+    }
   } finally {
     clearTimeout(timer);
   }
