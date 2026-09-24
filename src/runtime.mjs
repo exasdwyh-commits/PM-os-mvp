@@ -6,12 +6,18 @@ import { CapabilityGateway } from './core/capability-gateway.mjs';
 import { CompanyBrain } from './core/company-brain.mjs';
 import { Workforce } from './core/workforce.mjs';
 import { DecisionCouncil } from './core/decision-council.mjs';
+import { SqliteStorage } from './storage/sqlite-storage.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const dbFile = process.env.PM_OS_DB ?? path.join(root, 'data/pm-os.db');
+
+export const storage = new SqliteStorage(dbFile);
 export const registry = new ModelRegistry(path.join(root, 'config/models.json'));
 export const decisionPlane = new DecisionPlane({ registry, mode: process.env.ROUTER_MODE ?? 'shadow' });
-export const gateway = new CapabilityGateway(path.join(root, 'config/policies.json'));
-export const brain = new CompanyBrain(path.join(root, 'data/decision-log.json'));
+export const gateway = new CapabilityGateway(path.join(root, 'config/policies.json'), {
+  auditSink: entry => storage.appendAudit(entry)
+});
+export const brain = new CompanyBrain(storage);
 export const workforce = new Workforce({ gateway });
 export const council = new DecisionCouncil();
-export { root };
+export { root, dbFile };
