@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export class CompanyBrain {
   constructor(storage) {
     if (!storage?.put || !storage?.list) throw new TypeError('CompanyBrain requires a storage adapter');
@@ -7,7 +9,7 @@ export class CompanyBrain {
   all() { return this.storage.list('decision', { limit: 1000 }).reverse(); }
 
   remember(entry) {
-    const id = entry.id ?? `D-${crypto.randomUUID()}`;
+    const id = entry.id ?? `D-${randomUUID()}`;
     const record = {
       id,
       at: entry.at ?? new Date().toISOString(),
