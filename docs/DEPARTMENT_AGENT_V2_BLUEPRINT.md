@@ -1121,3 +1121,221 @@ I found 2 items that need you:
 ```
 
 This is the target behavior of a digital chief of staff: not waiting for work, but continuously moving goals forward within controlled boundaries.
+
+
+---
+
+## 28. V2 architecture freeze — authoritative clarifications
+
+This section resolves ambiguities in earlier sections and is authoritative when wording conflicts.
+
+### 28.1 Scope of the first V2 instance
+
+V2 is initially a **single-principal, single-department instance**.
+
+The schemas still carry actor/owner identifiers so multi-user RBAC can be added later without rewriting the data model.
+
+### 28.2 Authority model
+
+Authority is explicit:
+
+```text
+Human Principal
+↓
+Sentinel / ToolBroker
+↓
+Evidence + Independent Verifier
+↓
+Department Assistant
+↓
+Reflex Router / Experts / Digital Employees
+```
+
+- Human Principal: final business authorization.
+- Sentinel / ToolBroker: final security/action authority.
+- Evidence / Verifier: factual and quality authority.
+- Department Assistant: task/project orchestration authority.
+- Reflex/experts/employees: advisory or execution components.
+
+The Department Assistant may supervise work, but it must not become the sole authoritative verifier of its own synthesis.
+
+### 28.3 Reflex risk vs security risk
+
+Laya/System-1 may produce an advisory risk hint for routing and escalation.
+
+It is **not** the security authority.
+
+Security risk is derived from requested capabilities, resources, data class and policy at the ToolBroker/Sentinel boundary.
+
+Routing failure may fail open to a safe fallback model. Security/privacy/protected-action checks fail closed.
+
+### 28.4 Tool boundary
+
+Workers do not receive unrestricted tool handles.
+
+Every real tool call passes through ToolBroker:
+
+```text
+Worker
+↓
+ToolBroker
+↓
+runtime-bound identity
++ capability
++ resource scope
++ task/run
++ data policy
++ ApprovalGrant when required
+↓
+ALLOW / ASK / DENY
+↓
+Tool
+```
+
+Approvals are scoped records, not booleans.
+
+### 28.5 Privacy and data classes
+
+Durable objects use explicit data classes:
+
+- PUBLIC
+- INTERNAL
+- CONFIDENTIAL
+- RESTRICTED
+
+Expert/model selection must hard-filter against allowed data classes.
+
+If no policy-compliant expert/model exists, the system returns an explicit no-route state rather than silently falling back to an external frontier model.
+
+External disclosure is an auditable event.
+
+### 28.6 Evidence and epistemic model
+
+Do not mix assertion type with evidence quality.
+
+Use two axes:
+
+```text
+claimKind:
+FACT / INFERENCE / ESTIMATE / OPINION / FORECAST
+
+evidenceLevel:
+VERIFIED / STRONG / SUPPORTED / WEAK / UNKNOWN
+```
+
+Freshness is separate:
+
+```text
+FRESH / STALE / EXPIRED / UNKNOWN
+```
+
+A historically verified supplier quotation can become STALE without ceasing to be a verified historical fact.
+
+Classifier confidence belongs only to routing/classification and must never represent factual truth.
+
+### 28.7 Evidence trust and prompt-injection boundary
+
+External research, webpages, emails and retrieved documents are **untrusted input** by default.
+
+Rules:
+- tool/data content never becomes system instruction;
+- instruction-like content in external material is treated as data and may be flagged;
+- external material cannot become VERIFIED solely through model summarization;
+- evidence provenance is preserved through reports and knowledge promotion;
+- model consensus is not evidence.
+
+### 28.8 Knowledge promotion
+
+Knowledge layers have different write authority.
+
+```text
+Evidence Vault
+↓
+Project Memory / Project Knowledge
+↓
+Knowledge Promotion Proposal
+↓
+Company Knowledge
+```
+
+Knowledge Steward may add project-scoped knowledge when provenance is preserved.
+
+Promotion to reusable Company Knowledge requires a defined evidence threshold and/or human approval.
+
+Company Brain remains the store for decisions, outcomes and reflections; Company Knowledge stores reusable facts/policies/methods.
+
+### 28.9 Reports are first-class deliverables
+
+The primary professional user artifact is a structured Report, not a raw task result.
+
+A report contains:
+- executive summary;
+- conclusions with claim kind and evidence level;
+- evidence references;
+- decisions required;
+- risks;
+- unresolved questions;
+- knowledge debts;
+- cost summary when relevant;
+- next actions.
+
+Raw agent transcripts are debug/drill-down material.
+
+### 28.10 Collaboration room
+
+Executive Mode and Multi-Agent Discussion Room are one collaboration mechanism.
+
+Product Council is a reusable expert workflow that may run inside a Discussion Room; it is not a competing top-level product concept.
+
+### 28.11 Proactive autonomy guardrails
+
+Proactive work begins in **A1 shadow** before A2 execution.
+
+All proactive candidates must have a reason link.
+
+Initial hard guards:
+- daily task/cost/token budget;
+- topic deduplication;
+- proactive depth ≤ 1;
+- persistent A0 kill switch;
+- no protected external action without ApprovalGrant.
+
+The proactive engine must move existing goals forward, not invent arbitrary busywork.
+
+### 28.12 Self-evolution guardrails
+
+Evolution improvements are based on:
+- occurrence count;
+- affected tasks;
+- evidence;
+- impact;
+- eval/regression failures.
+
+Do not assign fake self-confidence such as “0.92” to improvement proposals.
+
+Prompts and routing metadata are production behavior assets. Changes require versioning, evals, shadowing where applicable, and rollback.
+
+Evolution implementation work must occur in an isolated branch/workspace; never mutate the running daemon in place.
+
+### 28.13 Evaluation before autonomy
+
+Before significant autonomous behavior, maintain a Golden Task set with:
+- expected properties;
+- known UNKNOWN cases;
+- privacy cases;
+- prompt-injection cases;
+- approval cases;
+- source/evidence requirements.
+
+The system must be able to demonstrate measurable improvement rather than self-reporting improvement.
+
+### 28.14 Durable lifecycle
+
+For persistence and recovery, use six durable stages:
+
+```text
+INTAKE → PLAN → EXECUTE → VERIFY → REPORT → LEARN
+```
+
+The more detailed conceptual lifecycle remains useful for reasoning, but checkpoints and recovery are defined at these durable stages.
+
