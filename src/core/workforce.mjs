@@ -1,17 +1,12 @@
+/**
+ * Legacy/reference pure-worker orchestration loop.
+ *
+ * This class intentionally does not own tool handles or identities.
+ * Any worker that needs file/shell/network side effects must receive a governed
+ * service whose effects already pass through ToolBroker. This loop is safe only
+ * for pure/in-memory transformations and test doubles.
+ */
 export class Workforce {
-  constructor({ gateway }) { this.gateway = gateway; }
-
-  async runTask({ identity, capability, resource = '*', taskId = null, input, worker, unattended = false, approvalGrant = null }) {
-    const gate = this.gateway.check({ identity, capability, resource, taskId, unattended, approvalGrant });
-    if (!gate.allowed) return { status: 'blocked', gate };
-    try {
-      const output = await worker(input);
-      return { status: 'ok', gate, output };
-    } catch (error) {
-      return { status: 'failed', gate, error: error.message };
-    }
-  }
-
   async softwareLoop({ spec, coder, qa, reviewer, maxRounds = 3 }) {
     const history = [];
     let artifact = null;
