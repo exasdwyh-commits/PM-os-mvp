@@ -64,3 +64,13 @@ test('tool broker checks every call with runtime-bound identity', async()=>{
   assert.equal(blocked.status,'blocked');
   assert.equal(calls,1);
 });
+
+
+test('tool registry cannot be mutated after broker construction',()=>{
+  const g=new CapabilityGateway(path.join(root,'config/policies.json'));
+  const broker=new ToolBroker({
+    gateway:g,identity,storage:new MemoryStorage(),
+    tools:{test:async()=>true}
+  });
+  assert.equal(typeof broker.register,'undefined');
+});
