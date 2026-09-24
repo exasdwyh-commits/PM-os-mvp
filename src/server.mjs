@@ -85,13 +85,15 @@ const server = http.createServer(async (req, res) => {
       const researchExecutor=new ResearchExecutor({
         gateway,storage,provider,actor:serverActor
       });
+      const idempotencyKey=req.headers['idempotency-key'] ? String(req.headers['idempotency-key']).slice(0,200) : null;
       const result=await runProductRndSlice({
         idea:payload.idea,
         dataClass:resolveDataClass(payload.dataClass),
         actor:serverActor,
         storage,
         decisionPlane,
-        researchExecutor
+        researchExecutor,
+        idempotencyKey
       });
       return send(res, 200, result);
     }
