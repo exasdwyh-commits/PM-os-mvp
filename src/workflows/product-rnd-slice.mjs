@@ -21,6 +21,20 @@ function hashText(text){
   return createHash('sha256').update(String(text ?? ''),'utf8').digest('hex');
 }
 
+function recoverExistingStart(storage, started, idempotencyKey){
+  const project=storage.get('project',started.projectId);
+  let task=storage.get('task',started.taskId);
+  if(task && !['COMPLETED','FAILED','CANCELLED'].includes(task.status)){
+    task=updateTask(storage,task,{status:'PAUSED',leaseUntil:null});
+    event(storage,{
+      type:'TASK_PAUSED',actor:'department-assistant',
+      projectId:task.projectId,taskId:task.id,
+      payload:{reason:'idempotent-retry-requires-resume'}
+    });
+  }
+  return {project,task,recoveryRequired:true,idempotencyKey};
+}
+
 export async function runProductRndSlice({
   idea,
   storage,
@@ -37,19 +51,7 @@ export async function runProductRndSlice({
     const completed=storage.getIdempotent('product-rnd-result',idempotencyKey);
     if(completed) return completed;
     const started=storage.getIdempotent('product-rnd-start',idempotencyKey);
-    if(started){
-      const project=storage.get('project',started.projectId);
-      let task=storage.get('task',started.taskId);
-      if(task && !['COMPLETED','FAILED','CANCELLED'].includes(task.status)){
-        task=updateTask(storage,task,{status:'PAUSED',leaseUntil:null});
-        event(storage,{
-          type:'TASK_PAUSED',actor:'department-assistant',
-          projectId:task.projectId,taskId:task.id,
-          payload:{reason:'idempotent-retry-requires-resume'}
-        });
-      }
-      return {project,task,recoveryRequired:true,idempotencyKey};
-    }
+    if(started) return recoverExistingStart(storage,started,idempotencyKey);
   }
 
   const project=createProject({
@@ -58,8 +60,6 @@ export async function runProductRndSlice({
     owner:actor,
     dataClass
   });
-  storage.put('project',project);
-
   const runId=`RUN-${project.id}`;
   let task=createTask({
     projectId:project.id,
@@ -76,9 +76,18 @@ export async function runProductRndSlice({
     attempt:1,
     runId
   });
-  storage.put('task',task);
-  if(idempotencyKey) storage.setIdempotent('product-rnd-start',idempotencyKey,{projectId:project.id,taskId:task.id});
-  event(storage,{type:'TASK_CREATED',actor,projectId:project.id,taskId:task.id,payload:{title:task.title}});
+  let concurrentStart=null;
+  storage.transaction(tx=>{
+    if(idempotencyKey){
+      concurrentStart=tx.getIdempotent('product-rnd-start',idempotencyKey);
+      if(concurrentStart) return;
+    }
+    tx.put('project',project);
+    tx.put('task',task);
+    if(idempotencyKey) tx.setIdempotent('product-rnd-start',idempotencyKey,{projectId:project.id,taskId:task.id});
+    event(tx,{type:'TASK_CREATED',actor,projectId:project.id,taskId:task.id,payload:{title:task.title}});
+  });
+  if(concurrentStart) return recoverExistingStart(storage,concurrentStart,idempotencyKey);
 
   task=updateTask(storage,task,{status:'PLANNED',stage:'PLAN',lastCheckpointStage:'INTAKE'});
   const route=await decisionPlane.route({
