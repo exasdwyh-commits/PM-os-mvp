@@ -16,3 +16,5 @@ jobs:
           node-version: '22'
       - name: Test
         run: npm test
+      - name: Golden eval
+        run: npm run eval:golden
