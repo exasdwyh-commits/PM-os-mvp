@@ -6,6 +6,7 @@ const SUSPICIOUS_PATTERNS=[
   /exfiltrat(e|ion)/i,
   /上传.{0,20}(公司|内部|机密|密钥|凭证)/i,
   /reveal.{0,20}(secret|credential|api\s*key)/i,
+  /\b(upload|send|post|transmit)\b.{0,30}\b(company|internal|secret|credential|api\s*key)/i,
   /(?:[A-Za-z0-9+\/]{120,}={0,2})/
 ];
 
