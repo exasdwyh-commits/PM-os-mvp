@@ -1,5 +1,7 @@
 # PM OS MVP Architecture
 
+> **Status:** V1 reference architecture. For current product direction, authority, privacy, evidence, autonomy and implementation order, use `DEPARTMENT_AGENT_V2_BLUEPRINT.md`, `V2_IMPLEMENTATION_ROADMAP.md`, and `GLOSSARY.md`. Where this file conflicts with those documents, V2 documents win.
+
 ## Goal
 This repository is a reference implementation, not a product fork. It demonstrates how to combine six architectural ideas into one small, auditable Agent OS core.
 
