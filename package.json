@@ -1,13 +1,13 @@
 {
   "name": "pm-os-mvp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Standalone reference MVP for PM OS: decision routing, governed execution, workforce orchestration and outcome memory.",
+  "description": "Department AI assistant reference MVP with governed execution, durable storage, evidence and evaluation.",
   "scripts": {
     "start": "node src/server.mjs",
     "demo": "node src/demo.mjs",
     "test": "node --test tests/*.test.mjs"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=22.5" }
 }
