@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { SqliteStorage } from '../src/storage/sqlite-storage.mjs';
 import { createProject, createTask } from '../src/contracts/domain.mjs';
 import { createEvidence, createReport, createApprovalGrant } from '../src/contracts/artifacts.mjs';
@@ -83,5 +84,38 @@ test('stale active tasks are recovered to PAUSED instead of remaining ghost RUNN
   assert.equal(recovered.length,1);
   assert.equal(s.get('task','TSK-STALE').status,'PAUSED');
   assert.equal(s.listEvents({taskId:'TSK-STALE'}).some(e=>e.type==='TASK_PAUSED'),true);
+  s.close();
+});
+
+
+test('sqlite idempotency stores the same key independently across namespaces',()=>{
+  const s=new SqliteStorage(':memory:');
+  s.setIdempotent('product-rnd-start','K1',{phase:'start'});
+  s.setIdempotent('product-rnd-result','K1',{phase:'result'});
+  assert.deepEqual(s.getIdempotent('product-rnd-start','K1'),{phase:'start'});
+  assert.deepEqual(s.getIdempotent('product-rnd-result','K1'),{phase:'result'});
+  s.close();
+});
+
+test('sqlite migrates legacy key-only idempotency primary key to namespace plus key',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pm-os-idem-migrate-'));
+  const file=path.join(dir,'pm-os.db');
+  const db=new DatabaseSync(file);
+  db.exec(`
+    CREATE TABLE idempotency_keys (
+      key TEXT PRIMARY KEY,
+      namespace TEXT NOT NULL,
+      result_json TEXT,
+      created_at TEXT NOT NULL
+    );
+    INSERT INTO idempotency_keys(key,namespace,result_json,created_at)
+    VALUES('K1','product-rnd-start','{"phase":"start"}','2026-09-24T00:00:00.000Z');
+  `);
+  db.close();
+
+  const s=new SqliteStorage(file);
+  assert.deepEqual(s.getIdempotent('product-rnd-start','K1'),{phase:'start'});
+  s.setIdempotent('product-rnd-result','K1',{phase:'result'});
+  assert.deepEqual(s.getIdempotent('product-rnd-result','K1'),{phase:'result'});
   s.close();
 });
