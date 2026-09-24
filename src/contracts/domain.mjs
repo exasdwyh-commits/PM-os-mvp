@@ -1,62 +1,30 @@
 import { randomUUID } from 'node:crypto';
 
-export const SCHEMA_VERSION = '2.0.0-mvp';
+export const SCHEMA_VERSION = '2.1.0-mvp';
 
-export const COLLABORATION_MODES = Object.freeze([
-  'ASSISTANT',
-  'DELEGATION',
-  'EXECUTIVE'
-]);
-
+export const COLLABORATION_MODES = Object.freeze(['ASSISTANT','DELEGATION','EXECUTIVE']);
 export const TASK_STATUS = Object.freeze([
-  'INTAKE',
-  'PLANNED',
-  'RUNNING',
-  'WAITING_HUMAN',
-  'BLOCKED',
-  'VERIFYING',
-  'COMPLETED',
-  'FAILED',
-  'CANCELLED'
+  'INTAKE','QUEUED','SCHEDULED','PLANNED','RUNNING','PAUSED','DEFERRED',
+  'WAITING_HUMAN','BLOCKED','VERIFYING','COMPLETED','FAILED','CANCELLED'
 ]);
+export const TASK_ORIGINS = Object.freeze(['USER','PROACTIVE','SCHEDULED','SYSTEM']);
+export const AUTONOMY_LEVELS = Object.freeze(['A0','A1','A2','A3','A4']);
+export const DATA_CLASSES = Object.freeze(['PUBLIC','INTERNAL','CONFIDENTIAL','RESTRICTED']);
+export const RISK_LEVELS = Object.freeze(['LOW','MEDIUM','HIGH','CRITICAL']);
+export const PRIORITY_LEVELS = Object.freeze(['LOW','MEDIUM','HIGH','CRITICAL']);
 
-export const EPISTEMIC_STATES = Object.freeze([
-  'VERIFIED',
-  'STRONG',
-  'SUPPORTED',
-  'INFERRED',
-  'ESTIMATED',
-  'UNCERTAIN',
-  'UNKNOWN'
-]);
+export const CLAIM_KINDS = Object.freeze(['FACT','INFERENCE','ESTIMATE','OPINION','FORECAST']);
+export const EVIDENCE_LEVELS = Object.freeze(['VERIFIED','STRONG','SUPPORTED','WEAK','UNKNOWN']);
+export const FRESHNESS_STATES = Object.freeze(['FRESH','STALE','EXPIRED','UNKNOWN']);
 
-export const GAP_TYPES = Object.freeze([
-  'CAPABILITY_GAP',
-  'TOOL_GAP',
-  'KNOWLEDGE_GAP',
-  'MODEL_GAP',
-  'FAILURE',
-  'REPEAT_ERROR',
-  'UNCERTAINTY',
-  'QUALITY_GAP',
-  'WORKFLOW_GAP',
-  'USER_CORRECTION',
-  'EFFICIENCY_GAP',
-  'MISSING_MEMORY'
-]);
+export const GAP_CAUSES = Object.freeze(['KNOWLEDGE','TOOL','MODEL','WORKFLOW','REASONING','MEMORY','DATA']);
+export const GAP_SIGNALS = Object.freeze(['FAILURE','CORRECTION','LOW_QUALITY','UNCERTAINTY','COST','LATENCY']);
 
-export const RISK_LEVELS = Object.freeze(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
-
-function assertEnum(value, allowed, field) {
-  if (!allowed.includes(value)) {
-    throw new TypeError(`${field} must be one of: ${allowed.join(', ')}`);
-  }
+export function assertEnum(value, allowed, field) {
+  if (!allowed.includes(value)) throw new TypeError(`${field} must be one of: ${allowed.join(', ')}`);
   return value;
 }
-
-function nowIso(now) {
-  return (now ?? new Date()).toISOString();
-}
+function nowIso(now) { return (now ?? new Date()).toISOString(); }
 
 export function createProject(input = {}, now) {
   if (!input.title?.trim()) throw new TypeError('project.title is required');
@@ -65,8 +33,13 @@ export function createProject(input = {}, now) {
     id: input.id ?? `PRJ-${randomUUID()}`,
     title: input.title.trim(),
     goal: input.goal?.trim() ?? '',
+    goalIds: [...(input.goalIds ?? [])],
     status: input.status ?? 'ACTIVE',
     owner: input.owner ?? null,
+    owners: [...(input.owners ?? [])],
+    dataClass: assertEnum(input.dataClass ?? 'INTERNAL', DATA_CLASSES, 'project.dataClass'),
+    budget: input.budget ?? null,
+    deadline: input.deadline ?? null,
     createdAt: input.createdAt ?? nowIso(now),
     updatedAt: input.updatedAt ?? nowIso(now),
     tags: [...(input.tags ?? [])],
@@ -76,10 +49,6 @@ export function createProject(input = {}, now) {
 
 export function createTask(input = {}, now) {
   if (!input.title?.trim()) throw new TypeError('task.title is required');
-  const mode = assertEnum(input.mode ?? 'ASSISTANT', COLLABORATION_MODES, 'task.mode');
-  const status = assertEnum(input.status ?? 'INTAKE', TASK_STATUS, 'task.status');
-  const risk = assertEnum(input.risk ?? 'LOW', RISK_LEVELS, 'task.risk');
-
   return {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `TSK-${randomUUID()}`,
@@ -87,13 +56,20 @@ export function createTask(input = {}, now) {
     parentTaskId: input.parentTaskId ?? null,
     title: input.title.trim(),
     request: input.request ?? '',
-    mode,
-    status,
-    risk,
+    mode: assertEnum(input.mode ?? 'ASSISTANT', COLLABORATION_MODES, 'task.mode'),
+    status: assertEnum(input.status ?? 'INTAKE', TASK_STATUS, 'task.status'),
+    origin: assertEnum(input.origin ?? 'USER', TASK_ORIGINS, 'task.origin'),
+    autonomyLevel: assertEnum(input.autonomyLevel ?? 'A0', AUTONOMY_LEVELS, 'task.autonomyLevel'),
+    risk: assertEnum(input.risk ?? 'LOW', RISK_LEVELS, 'task.risk'),
+    priority: assertEnum(input.priority ?? 'MEDIUM', PRIORITY_LEVELS, 'task.priority'),
+    dataClass: assertEnum(input.dataClass ?? 'INTERNAL', DATA_CLASSES, 'task.dataClass'),
+    reasonLinks: [...(input.reasonLinks ?? [])],
+    budget: input.budget ?? null,
+    deadline: input.deadline ?? null,
     ownerAgent: input.ownerAgent ?? 'department-assistant',
     assignedExperts: [...(input.assignedExperts ?? [])],
     checkpoint: input.checkpoint ?? null,
-    result: input.result ?? null,
+    reportId: input.reportId ?? null,
     createdAt: input.createdAt ?? nowIso(now),
     updatedAt: input.updatedAt ?? nowIso(now),
     metadata: { ...(input.metadata ?? {}) }
@@ -102,25 +78,25 @@ export function createTask(input = {}, now) {
 
 export function createKnowledgeItem(input = {}, now) {
   if (!input.topic?.trim()) throw new TypeError('knowledge.topic is required');
-  const epistemicState = assertEnum(
-    input.epistemicState ?? 'UNKNOWN',
-    EPISTEMIC_STATES,
-    'knowledge.epistemicState'
-  );
-
   return {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `KN-${randomUUID()}`,
     topic: input.topic.trim(),
     content: input.content ?? '',
-    epistemicState,
-    confidence: input.confidence ?? null,
-    sources: [...(input.sources ?? [])],
+    claimKind: assertEnum(input.claimKind ?? 'FACT', CLAIM_KINDS, 'knowledge.claimKind'),
+    evidenceLevel: assertEnum(input.evidenceLevel ?? 'UNKNOWN', EVIDENCE_LEVELS, 'knowledge.evidenceLevel'),
+    freshness: assertEnum(input.freshness ?? 'UNKNOWN', FRESHNESS_STATES, 'knowledge.freshness'),
+    dataClass: assertEnum(input.dataClass ?? 'INTERNAL', DATA_CLASSES, 'knowledge.dataClass'),
+    evidenceIds: [...(input.evidenceIds ?? [])],
     sourceDate: input.sourceDate ?? null,
     capturedAt: input.capturedAt ?? nowIso(now),
     reviewAt: input.reviewAt ?? null,
+    validFrom: input.validFrom ?? null,
+    validTo: input.validTo ?? null,
     scope: input.scope ?? null,
     projectId: input.projectId ?? null,
+    supersedes: input.supersedes ?? null,
+    supersededBy: input.supersededBy ?? null,
     conflicts: [...(input.conflicts ?? [])],
     metadata: { ...(input.metadata ?? {}) }
   };
@@ -132,8 +108,9 @@ export function createKnowledgeDebt(input = {}, now) {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `KD-${randomUUID()}`,
     topic: input.topic.trim(),
+    normalizedKey: input.normalizedKey ?? input.topic.trim().toLowerCase(),
     reason: input.reason ?? '',
-    importance: assertEnum(input.importance ?? 'MEDIUM', ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], 'knowledgeDebt.importance'),
+    importance: assertEnum(input.importance ?? 'MEDIUM', PRIORITY_LEVELS, 'knowledgeDebt.importance'),
     missing: [...(input.missing ?? [])],
     suggestedExperts: [...(input.suggestedExperts ?? [])],
     projectId: input.projectId ?? null,
@@ -148,17 +125,16 @@ export function createKnowledgeDebt(input = {}, now) {
 
 export function createImprovement(input = {}, now) {
   if (!input.title?.trim()) throw new TypeError('improvement.title is required');
-  const gapType = assertEnum(input.gapType ?? 'QUALITY_GAP', GAP_TYPES, 'improvement.gapType');
-
   return {
     schemaVersion: SCHEMA_VERSION,
     id: input.id ?? `REQ-${randomUUID()}`,
     title: input.title.trim(),
-    gapType,
+    cause: assertEnum(input.cause ?? 'WORKFLOW', GAP_CAUSES, 'improvement.cause'),
+    signal: assertEnum(input.signal ?? 'LOW_QUALITY', GAP_SIGNALS, 'improvement.signal'),
     description: input.description ?? '',
-    impact: assertEnum(input.impact ?? 'MEDIUM', ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], 'improvement.impact'),
-    confidence: input.confidence ?? null,
-    evidence: [...(input.evidence ?? [])],
+    impact: assertEnum(input.impact ?? 'MEDIUM', PRIORITY_LEVELS, 'improvement.impact'),
+    occurrenceCount: input.occurrenceCount ?? 1,
+    evidenceIds: [...(input.evidenceIds ?? [])],
     proposedChanges: [...(input.proposedChanges ?? [])],
     regressionCases: [...(input.regressionCases ?? [])],
     status: input.status ?? 'PROPOSED',
