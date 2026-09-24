@@ -3,8 +3,10 @@ import { fetchSource } from './source-fetcher.mjs';
 import { classifySourceUrl } from './source-trust.mjs';
 
 export class SourceFetchExecutor {
+  #broker;
+
   constructor({gateway,storage,actor='principal',fetchImpl=globalThis.fetch}) {
-    this.broker=new ToolBroker({
+    this.#broker=new ToolBroker({
       gateway,
       storage,
       identity:{role:'VERIFIER',actor,agent:'source-fetcher'},
@@ -23,7 +25,7 @@ export class SourceFetchExecutor {
       };
     }
     try {
-      return await this.broker.call({
+      return await this.#broker.call({
         tool:'fetchSource',
         capability:'source.fetch',
         resource:`source:${classified.host}`,
