@@ -55,7 +55,8 @@ export function createReport(input = {}, now) {
       claim: c.claim ?? '',
       claimKind: assertEnum(c.claimKind ?? 'FACT', CLAIM_KINDS, 'report.conclusion.claimKind'),
       evidenceLevel: assertEnum(c.evidenceLevel ?? 'UNKNOWN', EVIDENCE_LEVELS, 'report.conclusion.evidenceLevel'),
-      evidenceIds: [...(c.evidenceIds ?? [])]
+      evidenceIds: [...(c.evidenceIds ?? [])],
+      verification: c.verification ?? null
     })),
     decisionsRequired: [...(input.decisionsRequired ?? [])],
     risks: [...(input.risks ?? [])],
