@@ -14,16 +14,16 @@ export class MemoryStorage {
       .filter(v=>!projectId||v.projectId===projectId)
       .filter(v=>!taskId||v.taskId===taskId)
       .filter(v=>!status||v.status===status)
-      .slice(-limit).reverse().map(structuredClone);
+      .slice(-limit).reverse().map(v=>structuredClone(v));
   }
   appendEvent(event){ this.events.push(structuredClone(event)); return event; }
   listEvents({taskId=null,correlationId=null,limit=200}={}){
     return this.events.filter(e=>!taskId||e.taskId===taskId)
       .filter(e=>!correlationId||e.correlationId===correlationId)
-      .slice(-limit).map(structuredClone);
+      .slice(-limit).map(e=>structuredClone(e));
   }
   appendAudit(entry){ this.audit.push(structuredClone(entry)); return entry; }
-  listAudit(limit=200){ return this.audit.slice(-limit).reverse().map(structuredClone); }
+  listAudit(limit=200){ return this.audit.slice(-limit).reverse().map(e=>structuredClone(e)); }
   setMeta(key,value){ this.meta.set(key,structuredClone(value)); }
   getMeta(key){ const v=this.meta.get(key); return v===undefined?null:structuredClone(v); }
   close(){}
