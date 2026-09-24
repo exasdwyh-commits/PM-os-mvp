@@ -1,11 +1,19 @@
 {
   "roles": {
     "PM": ["memory.read","decision.route","council.run","task.delegate","artifact.read"],
-    "ENGINEER": ["artifact.read","artifact.write","shell.test","git.diff"],
+    "ENGINEER": ["artifact.read","artifact.write","shell.test","git.diff","git.merge"],
     "QA": ["artifact.read","shell.test","report.write"],
     "RESEARCH": ["web.search","artifact.read","report.write"],
-    "SYSTEM": ["*"]
+    "EVOLUTION": ["prompt.propose","knowledge.index.propose","test.propose","improvement.write"],
+    "SYSTEM": ["memory.read","decision.route","task.delegate","artifact.read","report.write"]
   },
-  "approvalRequired": ["git.merge","deploy.production","database.migrate","artifact.delete","secret.read"],
-  "denyUnattended": ["git.merge","deploy.production","database.migrate","secret.read"]
+  "approvalRequired": ["git.merge","deploy.production","database.migrate","artifact.delete","secret.use","external.send"],
+  "denyUnattended": ["git.merge","deploy.production","database.migrate","secret.use","external.send"],
+  "resourceRules": {
+    "git.merge": ["refs/heads/feature/*"],
+    "artifact.read": ["*"],
+    "artifact.write": ["workspace/*"],
+    "web.search": ["public-web"],
+    "report.write": ["reports/*"]
+  }
 }
