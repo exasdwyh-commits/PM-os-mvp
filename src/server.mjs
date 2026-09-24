@@ -5,6 +5,9 @@ import { randomUUID } from 'node:crypto';
 import { decisionPlane, gateway, brain, root, storage } from './runtime.mjs';
 import { createResearchProviderFromEnv } from './adapters/research-provider.mjs';
 import { ResearchExecutor } from './core/research-executor.mjs';
+import { SourceFetchExecutor } from './core/source-fetch-executor.mjs';
+import { EvidenceVerifier } from './core/evidence-verifier.mjs';
+import { createRepositories } from './repositories/domain-repositories.mjs';
 import { runProductRndSlice } from './workflows/product-rnd-slice.mjs';
 import { resolveDataClass, verifyBearerToken } from './core/request-policy.mjs';
 
@@ -69,14 +72,21 @@ const server = http.createServer(async (req, res) => {
       const researchExecutor=new ResearchExecutor({
         gateway,storage,provider,actor:serverActor
       });
+      const sourceFetchExecutor=new SourceFetchExecutor({
+        gateway,storage,actor:serverActor
+      });
+      const verifier=new EvidenceVerifier({identity:'evidence-verifier-v1'});
+      const repositories=createRepositories(storage);
       const idempotencyKey=req.headers['idempotency-key'] ? String(req.headers['idempotency-key']).slice(0,200) : null;
       const result=await runProductRndSlice({
         idea:payload.idea,
         dataClass:resolveDataClass(baseDataClass,payload.dataClass),
         actor:serverActor,
-        storage,
+        repositories,
         decisionPlane,
         researchExecutor,
+        sourceFetchExecutor,
+        verifier,
         idempotencyKey
       });
       return send(res, 200, result);
