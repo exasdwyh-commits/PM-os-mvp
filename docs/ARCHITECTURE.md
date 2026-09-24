@@ -4,7 +4,7 @@
 This repository is a reference implementation, not a product fork. It demonstrates how to combine six architectural ideas into one small, auditable Agent OS core.
 
 ## 1. Decision Plane
-Inspired by Hermes + Jev / TypeSafe patterns:
+Inspired by Jev / typed-decision routing patterns:
 - typed judgments instead of prose decisions;
 - `tier`, `workKind`, `risk`, `confidence` as data;
 - model pool selection from a registry;
