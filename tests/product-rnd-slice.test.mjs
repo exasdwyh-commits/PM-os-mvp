@@ -28,7 +28,7 @@ test('product R&D vertical slice persists report evidence debt and audit events'
 
 test('specialist failure degrades honestly to UNKNOWN instead of fabricating completion', async()=>{
   const storage=new MemoryStorage();
-  const failing={id:'failing-provider',external:true,research:async()=>{throw new Error('offline');}};
+  const failing={id:'failing-provider',external:true,allowedDataClasses:['PUBLIC','INTERNAL'],research:async()=>{throw new Error('offline');}};
   const result=await runProductRndSlice({
     idea:'New functional food',
     storage,
