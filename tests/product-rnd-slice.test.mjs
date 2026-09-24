@@ -39,3 +39,44 @@ test('specialist failure degrades honestly to UNKNOWN instead of fabricating com
   assert.equal(result.report.conclusions[0].evidenceLevel,'UNKNOWN');
   assert.ok(result.report.unresolvedQuestions.some(x=>x.includes('Provider failure')));
 });
+
+
+test('external research provider is blocked for confidential data before disclosure', async()=>{
+  const storage=new MemoryStorage();
+  let calls=0;
+  const external={
+    id:'external-provider',
+    external:true,
+    allowedDataClasses:['PUBLIC','INTERNAL'],
+    research:async()=>{calls++; return {summary:'x',claims:[],unknowns:[],suggestedNextActions:[]};}
+  };
+  const result=await runProductRndSlice({
+    idea:'Confidential product',
+    dataClass:'CONFIDENTIAL',
+    storage,
+    decisionPlane,
+    researchProvider:external
+  });
+  assert.equal(calls,0);
+  assert.match(result.provider.error,/provider-not-allowed-for-data-class/);
+  assert.equal(storage.listEvents({taskId:result.task.id}).some(e=>e.type==='EXTERNAL_DISCLOSURE'),false);
+});
+
+test('allowed external research emits disclosure audit event', async()=>{
+  const storage=new MemoryStorage();
+  const external={
+    id:'external-provider',
+    external:true,
+    allowedDataClasses:['PUBLIC','INTERNAL'],
+    research:async()=>({summary:'advisory',claims:[],unknowns:['needs evidence'],suggestedNextActions:[]})
+  };
+  const result=await runProductRndSlice({
+    idea:'Internal product',
+    dataClass:'INTERNAL',
+    storage,
+    decisionPlane,
+    researchProvider:external
+  });
+  assert.equal(result.provider.error,null);
+  assert.equal(storage.listEvents({taskId:result.task.id}).some(e=>e.type==='EXTERNAL_DISCLOSURE'),true);
+});
