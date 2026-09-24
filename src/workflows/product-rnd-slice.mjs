@@ -376,21 +376,34 @@ export async function runProductRndSlice({
     .map(c=>`Unverified claim: ${c.claim}`);
   unknowns.push(...verifierUnknowns);
 
+  const supportedCount=conclusions.filter(c=>['SUPPORTED','STRONG','VERIFIED'].includes(c.evidenceLevel)).length;
+  const unresolvedCount=conclusions.filter(c=>c.evidenceLevel==='UNKNOWN').length;
+  const systemNextActions=[];
+  if(providerError) systemNextActions.push('Retry research with an available policy-compliant provider.');
+  if(unknowns.length || unresolvedCount) systemNextActions.push('Resolve unresolved evidence gaps using primary or official sources before making irreversible decisions.');
+  if(supportedCount) systemNextActions.push('Review the source-backed conclusions and decide whether to continue into supplier, cost and compliance validation.');
+
   const report=createReport({
     title:`Product opportunity report: ${idea.slice(0,80)}`,
     projectId:project.id,
     taskId:task.id,
-    executiveSummary:research.summary || 'Initial evaluation completed with unresolved evidence gaps.',
+    executiveSummary:`Initial evidence review completed: ${supportedCount} claim(s) have independent source support and ${unresolvedCount} remain unresolved.`,
     conclusions,
     decisionsRequired:['Decide whether to continue into deeper evidence-gathering and supplier validation.'],
     risks:[
       'Consultant/model output is advisory and cannot establish verified facts by itself.',
-      'Rules-only verifier can promote clean independently fetched official/primary sources to SUPPORTED or STRONG, but never VERIFIED.',
+      'Rules-only verification requires an independently fetched trusted source and a verifier-derived support span; it never emits VERIFIED.',
       ...((research.quarantinedItems ?? []).length ? ['Instruction-like external content was quarantined and excluded from conclusions/actions.'] : [])
     ],
     unresolvedQuestions:[...new Set(unknowns)],
     knowledgeDebtIds:[...new Set(debts.map(x=>x.id))],
-    nextActions:research.suggestedNextActions ?? [],
+    nextActions:systemNextActions,
+    advisoryNotes:[{
+      source:execution.provider.id,
+      trust:'UNTRUSTED_ADVISORY',
+      summary:research.summary ?? '',
+      suggestedNextActions:[...(research.suggestedNextActions ?? [])]
+    }],
     verifierRunId:`VERIFY-${runId}`,
     verifierIdentity:verifier.identity ?? 'independent-verifier',
     verifiedAt:new Date().toISOString()
